@@ -8,7 +8,7 @@ Math.isClose = function(a, b){
 };
 
 Vector3d.prototype.isClose = function(v){
-	return (Math.isClose(this.x, v.x) && Math.isClose(this.y, v.y) && Math.isClose(this.z, v.z));
+	return (Math.isClose(this.v[0], v.v[0]) && Math.isClose(this.v[1], v.v[1]) && Math.isClose(this.v[2], v.v[2]));
 };
 
 
