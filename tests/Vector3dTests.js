@@ -338,11 +338,11 @@ Vector3d.prototype.tests = function(numSamples){
 	return passed;
 };
 
-numSamples = 10;
+numSamples = 100;
 //numSamples = 10000; This causes the page to become unresponsive, profiling hangs in chrome every time.
 if (Vector3d.prototype.tests(numSamples)){
-	console.log("All Vector3d tests passed with sample size "+ numSamples +".");
+	document.write("All Vector3d tests passed with sample size "+ numSamples +".");
 } else {
-	console.log("Some Vector3d tests failed.");
+	document.write("Some Vector3d tests failed.");
 }
 
