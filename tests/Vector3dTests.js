@@ -8,7 +8,7 @@ Math.isClose = function(a, b){
 };
 
 Vector3d.prototype.isClose = function(v){
-	return (Math.isClose(this.x, v.x) && Math.isClose(this.y, v.y) && Math.isClose(this.z, v.z));
+	return (Math.isClose(this.v[0], v.v[0]) && Math.isClose(this.v[1], v.v[1]) && Math.isClose(this.v[2], v.v[2]));
 };
 
 
@@ -338,11 +338,11 @@ Vector3d.prototype.tests = function(numSamples){
 	return passed;
 };
 
-numSamples = 10;
+numSamples = 100;
 //numSamples = 10000; This causes the page to become unresponsive, profiling hangs in chrome every time.
 if (Vector3d.prototype.tests(numSamples)){
-	console.log("All Vector3d tests passed with sample size "+ numSamples +".");
+	document.write("All Vector3d tests passed with sample size "+ numSamples +".");
 } else {
-	console.log("Some Vector3d tests failed.");
+	document.write("Some Vector3d tests failed.");
 }
 
