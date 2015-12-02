@@ -1,5 +1,9 @@
 Math.TAU = Math.TAU || 2 * Math.PI;
 
+/*See http://jsperf.com/typed-arrays-set-vs-indices 
+for the setting of short arrays.
+*/
+
 function Vector3d(x, y, z){
   var tView = Float64Array;
   var b = new ArrayBuffer(3 * tView.BYTES_PER_ELEMENT);
@@ -7,7 +11,7 @@ function Vector3d(x, y, z){
   this.v[0] = x;
   this.v[1] = y;
   this.v[2] = z;
-  // return this;
+  return this;
 }
 
 Vector3d.prototype.copy = function(){
