@@ -1,16 +1,6 @@
-Math.relativeTol = 1E-5;
-Math.absoluteTol = 1E-8;
-
-Math.isClose = function(a, b){
-	//Based on Numpy implementation:
-	//http://docs.scipy.org/doc/numpy-dev/reference/generated/numpy.isclose.html
-	return (Math.abs(a-b) <= Math.absoluteTol + Math.relativeTol * Math.abs(b));
-};
-
 Vector3d.prototype.isClose = function(v){
 	return (Math.isClose(this.v[0], v.v[0]) && Math.isClose(this.v[1], v.v[1]) && Math.isClose(this.v[2], v.v[2]));
 };
-
 
 Vector3d.prototype.tests = function(numSamples){
 /*	The usage of every test<Property> is that you expect that property to be "numerically true."

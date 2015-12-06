@@ -134,33 +134,53 @@ BruteFrog.prototype.batchCalcForces = function(){
 BruteFrog.prototype.fasterSqrts = function(xSq, x){
 	//Assume 64 bits,
 	//32 bits has lo = offset, hi = offset+1
-	var xSqBits = new Uint32Array(xSq.buffer);
-	var x32Bits = new Uint32Array(x.buffer);
-	var x32Float = new Float32Array(x.buffer);
+
+  var xSqByte0 = new Uint32Array(x.buffer, 0);
+  var xSqByte1 = new Uint32Array(x.buffer, 1);
+  var xSqByte2 = new Uint32Array(x.buffer, 2);
+  var xSqByte3 = new Uint32Array(x.buffer, 3);
+  var xSqByte4 = new Uint32Array(x.buffer, 4);
+	var xSqBitLo = xSqByte0;
+  var xSqBitHi = xSqByte4;
+
+  var x32Byte0 = new Uint32Array(x.buffer, 0);
+  var x32Byte1 = new Uint32Array(x.buffer, 1);
+  var x32Byte2 = new Uint32Array(x.buffer, 2);
+  var x32Byte3 = new Uint32Array(x.buffer, 3);
+  var x32Byte4 = new Uint32Array(x.buffer, 4);
+
+  var x32BitLo = x32Byte0;
+  var x32BitHi = x32Byte4;
+
+  var x32FloatLo = new Float32Array(x.buffer, 0);
+  var x32FloatHi = new Float32Array(x.buffer, 4);
+
 	var i;
 
+
 	for(i = 0; i < xSq.length; i++){
-		x32Float[2*i] = xSq[i];
+		x32FloatLo[2*i] = xSq[i];
 	}
+
 
 	for (i = 0; i < x32Bits.length; i+=2){
 		//0th guess by dividing exponent and mantissa by 2:
-		x32Bits[i + 1] = x32Bits[i] >>> 1;
+		x32BitHi[i] = x32BitLo[i] >>> 1;
 
 		//Put back the exponent bias/2:
-		x32Bits[i + 1] += 0x1fc00000;
+		x32BitHi[i] += 0x1fc00000;
 
 		//2nd Order correction:
-		x32Float[i + 1] -= (x32Float[i]-1) * (x32Float[i]-1) * 0.0857864376269;
+		x32FloatHi[i] -= (x32FloatLo[i]-1) * (x32FloatLo[i]-1) * 0.0857864376269;
 
 		//Perform Newton's method on 32bit float.
 		//One 32-bit float refinement:
-		x32Float[i + 1] += x32Float[i] / x32Float[i + 1];
-		x32Bits[i + 1]  -= 0x00800000;
+		x32FloatHi[i] += x32FloatLo[i] / x32FloatHi[i];
+		x32BitHi[i + 1]  -= 0x00800000;
 	}
 
 	for(i = 0; i < xSq.length; i++){
 		//One 64-bit refinement:
-		x[i] = (x32Float[2*i + 1]+ xSq[i]/x32Float[2*i + 1])/2;
+		x[i] = (x32FloatHi[2*i]+ xSq[i]/x32FloatHi[2*i])/2;
 	}
 };
