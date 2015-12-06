@@ -153,14 +153,20 @@ BruteFrog.prototype.fasterSqrts = function(xSq, x){
 
 
 	for (i = 0; i < x32BitLo.length; i+=2){
+
 		//0th guess by dividing exponent and mantissa by 2:
 		x32BitHi[i] = x32BitLo[i] >>> 1;
 
 		//Put back the exponent bias/2:
 		x32BitHi[i] += 0x1fc00000;
-
+    var b = (x32BitLo[i] & 0x01000000)-0x01000000;
 		//2nd Order correction:
-		x32FloatHi[i] -= (x32FloatLo[i]-1) * (x32FloatLo[i]-1) * 0.0857864376269;
+    // if(x32FloatLo[i] > 2){debugger;}
+    if(b){
+		  x32FloatHi[i] -= (1 - x32FloatLo[i]/2) * (1 - x32FloatLo[i]/2) * 0.0857864376269;
+    }else{
+      x32FloatHi[i] -= (1 - x32FloatLo[i]) * (1 - x32FloatLo[i]) * 0.0857864376269;
+    }
 
 		//Perform Newton's method on 32bit float.
 		//One 32-bit float refinement:
@@ -170,6 +176,7 @@ BruteFrog.prototype.fasterSqrts = function(xSq, x){
 
 	for(i = 0; i < xSq.length; i++){
 		//One 64-bit refinement:
+    // x[i] = x32FloatHi[2*i];
 		x[i] = (x32FloatHi[2*i]+ xSq[i]/x32FloatHi[2*i])/2;
 	}
 };
