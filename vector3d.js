@@ -1,6 +1,6 @@
 Math.TAU = Math.TAU || 2 * Math.PI;
 
-/*See http://jsperf.com/typed-arrays-set-vs-indices 
+/*See http://jsperf.com/typed-arrays-set-vs-indices
 for the setting of short arrays.
 */
 
