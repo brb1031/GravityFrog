@@ -135,22 +135,11 @@ BruteFrog.prototype.fasterSqrts = function(xSq, x){
 	//Assume 64 bits,
 	//32 bits has lo = offset, hi = offset+1
 
-  var xSqByte0 = new Uint32Array(x.buffer, 0);
-  var xSqByte1 = new Uint32Array(x.buffer, 1);
-  var xSqByte2 = new Uint32Array(x.buffer, 2);
-  var xSqByte3 = new Uint32Array(x.buffer, 3);
-  var xSqByte4 = new Uint32Array(x.buffer, 4);
-	var xSqBitLo = xSqByte0;
-  var xSqBitHi = xSqByte4;
+	var xSqBitLo = new Uint32Array(x.buffer, 0);
+  var xSqBitHi = new Uint32Array(x.buffer, 4);
 
-  var x32Byte0 = new Uint32Array(x.buffer, 0);
-  var x32Byte1 = new Uint32Array(x.buffer, 1);
-  var x32Byte2 = new Uint32Array(x.buffer, 2);
-  var x32Byte3 = new Uint32Array(x.buffer, 3);
-  var x32Byte4 = new Uint32Array(x.buffer, 4);
-
-  var x32BitLo = x32Byte0;
-  var x32BitHi = x32Byte4;
+  var x32BitLo = new Uint32Array(x.buffer, 0);;
+  var x32BitHi = new Uint32Array(x.buffer, 4);;
 
   var x32FloatLo = new Float32Array(x.buffer, 0);
   var x32FloatHi = new Float32Array(x.buffer, 4);
@@ -163,7 +152,7 @@ BruteFrog.prototype.fasterSqrts = function(xSq, x){
 	}
 
 
-	for (i = 0; i < x32Bits.length; i+=2){
+	for (i = 0; i < x32BitLo.length; i+=2){
 		//0th guess by dividing exponent and mantissa by 2:
 		x32BitHi[i] = x32BitLo[i] >>> 1;
 
@@ -176,7 +165,7 @@ BruteFrog.prototype.fasterSqrts = function(xSq, x){
 		//Perform Newton's method on 32bit float.
 		//One 32-bit float refinement:
 		x32FloatHi[i] += x32FloatLo[i] / x32FloatHi[i];
-		x32BitHi[i + 1]  -= 0x00800000;
+		x32BitHi[i]  -= 0x00800000;
 	}
 
 	for(i = 0; i < xSq.length; i++){
