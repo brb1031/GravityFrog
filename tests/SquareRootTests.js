@@ -1,12 +1,12 @@
 SquareRootTests = function(numSamples){
   var f = [];
   var i;
-  var Min=1;
-  var Max=4;
+  var Min=0;
+  var Max=1;
   var stepSize = (Max - Min)/(numSamples);
   var passed = true;
   if(numSamples < 2){
-    numSamples = 3;
+    numSamples = 101;
   }
 
   for(i=0; i < numSamples; i++){
@@ -33,7 +33,7 @@ SquareRootTests = function(numSamples){
   return passed;
 };
 
-numSamples = 100;
+numSamples = 3;
 if (SquareRootTests(numSamples)){
   document.write("Square Root Tests passed with sample size "+ numSamples +".");
 } else {
