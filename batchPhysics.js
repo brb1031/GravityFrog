@@ -134,33 +134,68 @@ BruteFrog.prototype.batchCalcForces = function(){
 BruteFrog.prototype.fasterSqrts = function(xSq, x){
 	//Assume 64 bits,
 	//32 bits has lo = offset, hi = offset+1
-	var xSqBits = new Uint32Array(xSq.buffer);
-	var x32Bits = new Uint32Array(x.buffer);
-	var x32Float = new Float32Array(x.buffer);
+
+	// var xSqBitLo = new Uint32Array(x.buffer, 0);
+ //  var xSqBitHi = new Uint32Array(x.buffer, 4);
+
+  // var inputByteLength = xSq.length*xSq.BYTES_PER_ELEMENT;
+
+
+  var x32FloatLo = new Float32Array(x.buffer, 0);
+  var x32FloatHi = new Float32Array(x.buffer, 4);
+
+  var x32UnsignedLo = new Uint32Array(x.buffer, 0);
+  var x32UnsignedHi = new Uint32Array(x.buffer, 4);
+
+  var x32IntLo = new Int32Array(x.buffer, 0);
+  var x32IntHi = new Int32Array(x.buffer, 4);
+
+  var x16Byte0 = new Int16Array(x.buffer, 0);
+  var x16Byte2 = new Int16Array(x.buffer, 2);
+
 	var i;
 
+
 	for(i = 0; i < xSq.length; i++){
-		x32Float[2*i] = xSq[i];
+		x32FloatLo[2*i] = xSq[i];
 	}
 
-	for (i = 0; i < x32Bits.length; i+=2){
-		//0th guess by dividing exponent and mantissa by 2:
-		x32Bits[i + 1] = x32Bits[i] >>> 1;
 
-		//Put back the exponent bias/2:
-		x32Bits[i + 1] += 0x1fc00000;
+	for (i = 0; i < x32IntLo.length; i+=2){
+    //Set sign bit to zero.
+    x32IntLo[i] &= 0x7fffffff;
+
+    // Guess such that bias+exp/2 is in higher 16 bits
+    // (exp%2, Mantissa) in lower 16 bits
+
+    x32IntLo[i] += 0x3f800000;
+    x32IntLo[i] >>>= 8;
+    x32IntHi[i] = x32IntLo[i];
+    // exp/2, (b+x)/2
+
 
 		//2nd Order correction:
-		x32Float[i + 1] -= (x32Float[i]-1) * (x32Float[i]-1) * 0.0857864376269;
+    x32IntLo[i] = (x16Byte0[2*i] * x16Byte0[2*i]);
+    x32IntLo[i] = 22488 * x16Byte2[2*i];
+    x32IntLo[i] >>>= 16;
+    // lo has 0, f(x-b)^2
+
+    x32UnsignedLo[i] = x32UnsignedHi[i] - x32UnsignedLo[i];
+    // lo has n, (b+x)/2-f(x-b)^2
+
+    x32FloatHi[i]  = xSq[i/2];
+    // hi has 2n+b, x & 0xfffe, fucked up bias.
+    x32IntLo[i] <<= 7;
 
 		//Perform Newton's method on 32bit float.
-		//One 32-bit float refinement:
-		x32Float[i + 1] += x32Float[i] / x32Float[i + 1];
-		x32Bits[i + 1]  -= 0x00800000;
+		x32FloatLo[i] += x32FloatHi[i] / x32FloatLo[i];
+    // x32FloatLo[i] /= 2;
+		x32UnsignedLo[i] -= 0x00800000;
 	}
 
 	for(i = 0; i < xSq.length; i++){
 		//One 64-bit refinement:
-		x[i] = (x32Float[2*i + 1]+ xSq[i]/x32Float[2*i + 1])/2;
+    // x[i] = (x32FloatHi[2*i]+ xSq[i]/x32FloatHi[2*i])/2;
+    x[i] = x32FloatLo[2*i];
 	}
 };

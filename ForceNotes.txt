@@ -1,3 +1,5 @@
+*****************************************************************
+
 F_on_i = G * sum_j(m_i * m_j) * (ri - rj) / (ri-rj)^3
 (ri - rj)^2 = (ri_x - rj_x)^2 + (ri_y - rj_y)^2 + (ri_z - rj_z)^2
 5 adds, 3 multiplies, 6 lookups
@@ -19,15 +21,9 @@ for (i=0, index=0;i<N;i++, index++)
 Easy to append to, equally easy to remove last element.  Difficult to insert or delete from arbitrary location.
 Easy to build.  If it's not traversed, but consulted, then deletion and insertion aren't really a problem.
 So, magnitudes of forces and distances may be profitable to cache in a structure like this.
-Previous distance value is a very cheap guess for current distance.
+Previous distance value is a very cheap (order of magnitude) guess for current distance.
 
-
-  //Pre-calculate all accelerations due to sun.
-  var sun = ps[0];
-  for (i = 0; i < ps.length; i++) {
-    ps[i].accSun =
-  }
-
+*****************************************************************
 
 In COM coords,
 (m1+m2)x_com = m1*x1 + m2*x2
@@ -40,8 +36,14 @@ a12 = a of 1 due to 2
 F12 = -F21 (Newton's 3rd)
 m1*a12 = - m2*a21
 a21 = -(m1/m2)*a12
+*****************************************************************
+Binning 3d Space:
+
+Data structure options:
+Octree
 
 
+Tesselation options:
 
 Cube has:
 Easy membership conditions
@@ -57,36 +59,7 @@ membership conditions that I haven't worked out.
 8 face neighbors, 12 edge neighbors, 6 vertex neighbors.
 
 
-Vector3d.prototype.projectPlane = function(plane){
-	//Plane is a Vector3d perpendicular to that plane.
-	var projectedV = new Vector3d(this.x, this.y, this.z);
-	projectedV.decrement(plane.scale(this.dot(plane)/plane.magnitude()));
-	return projectedV;
-}
-
-
-
-Zoom starts at zero.
-AU appears to be 50 pixels.
-
-
-Todo:
-
-Linting Plug-In.
-
-
-
-
-
-// var tmp = [];
-  // for(var j = 0; j < app.particles.length; j++) {
-  //   if(j != currIndex) {
-  //     tmp.push(app.particles[j]);
-  //   }
-  // }
-  // app.particles = tmp;
-
-
+*****************************************************************
 right shift of 64-bit float represented as 2 adjacent 32 bit integers.
 
 hi = MSbits, lo = LSbits
@@ -174,6 +147,12 @@ oddpowertwo = (0x00100000 & ~0xexp00000(hi))
 yields 0x00100000 if odd power of two, 0 otherwise.
 Maybe I can directly construct the multiplier...
 
+Very good approx:
+Max(0.2792684502 x^2 + 0.0370592915 x - 0.0015009213, 0)
+Or: 0.2994174653 x^2 + 0.0250131236 x, if Max is too expensive
+
+Later, need operation:
+if oddpowertwo = 0x00100000, (2^20) multiply float result by sqrt(2), otherwise do not.  (Or multiply by 1)
 For cases when exp_unbiased = exp-0x3ff is even:
 
 result(hi) = (Number(hi)>>>1) + 0x1ff80000 //(UInt rep of 1.0)/2
@@ -284,7 +263,10 @@ result64f = (result64f + Num64f/result64f)/2
 
 
 ****************************************************************
-
+Float 32 <---> Float 64
+(1+7 bits), (24 bits) <---> (1+11 bits), (20bits, 32bits)
+(exp+63? 127?)
+(exp+127),(1+x/2^24)
 (exp32-0x3f800000) >> 24 = (exp64-0x3ff00000) >> 20
 
 *****************************************************************
@@ -338,23 +320,8 @@ Result:
 
 
 
-Max(0.2792684502 x^2 + 0.0370592915 x - 0.0015009213, 0)
-Or: 0.2994174653 x^2 + 0.0250131236 x, if Max is too expensive
 
 
-
-
-Later, need operation:
-if oddpowertwo = 0x00100000, (2^20) multiply float result by sqrt(2), otherwise do not.  (Or multiply by 1)
-
-
-
-
-1+x = what squared?
-g(x)^2 = 1 + x
-(asqrt(x) + b)^2 = 1+x
-a^2x + b^2 + 2ab sqrt(x) = 1 + x
-(1+x/2)^2 - x^2/4 = 1+x
 
 
 
@@ -410,6 +377,205 @@ sqrt(1+x)(@x=1) = sqrt(2) ~= 1.414
 
 
 
+32bit float:
 
+Original 64bit float:
+| B | B | B | B | B | B | B | B |
+| exp |           x             |
+
+
+float32[0] = float64
+float32[1] = float64
+After 32bit casting to float32[0]:
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] | Float32Arr[0] |
+|sexp|    x     |sexp|    x     |
+
+uint32[0] >>> = 7
+
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] | Float32Arr[0] |
+|sexp|     x    |  sexp |   x   |
+
+
+uint32[0] = uint16[0]*uint16[0]
+
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] |  Uint32Arr[0] |
+|sexp|     x    |      x^2      |
+
+For f = (1.5 - sqrt(2)) ~= 5622 / 2^16
+
+uint32[0] = uint16[1] * f * 2^16
+          = uint16[1] * 5622
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] |  Uint32Arr[0] |
+|sexp|     x    |     fx^2      |
+
+
+uint32[0] >>>= 8
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] |  Uint32Arr[0] |
+|sexp|     x    | 0  |  2fx^2   |
+
+
+uint32[0] -= uint32[1]
+
+
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] |  Uint32Arr[0] |
+|sexp|     x    |sexp| x - 2fx^2|
+
+uint32[1] = (uint32[1] & 0x00ffffff) ^ 0x00800000
+
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] |  Uint32Arr[0] |
+|   b|     x    |sexp| x - 2fx^2|
+b == 1 if unbiased exponent is odd.
+
+
+uint32[0] >>>= 1
+uint32[0] += 0x1fc00000
+uint32[0] &= ~(1 >> 23)
+
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] |  Uint32Arr[0] |
+|   b|     x    |sexp/2|x/2 -fx^2|
+
+
+
+
+
+32 bit float Sqrt(2) = 0x3fb504f3
+
+
+
+
+
+
+
+Highest byte:
+b7, b6, b5, b4, b3, b2, b1, b0
+b0, b6, b5, b4, b3, b2, b1, 0
+
+uint8[7] = (uint8[7] << 7) | (01111110 & uint8[7])
+
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] |  Uint32Arr[0] |
+|bex|     x     | 0 |   fx^2    |
+
+uint32[1] >>>= 1
+uint32[1] += (32bitbias) / 2
+
+Result:
+| B   | B | B | B | B | B | B | B |
+|   Float32Arr[1] |  Uint32Arr[0] |
+|bex/2|    x/2    | 0 |   fx^2    |
+
+
+uint32[1] -= uint32[0]
+
+Result:
+| B   | B | B | B | B | B | B | B |
+|   Float32Arr[1] |  Uint32Arr[0] |
+|bex/2| x/2-fx^2  | 0 |   fx^2    |
+
+32bit sqrt (2)
+
+
+
+
+POINT A:
+
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] |  Uint32Arr[0] |
+|exp|     x     |      x^2      |
+
+For f = (1.5 - sqrt(2)) ~= 5622 / 2^16
+
+xMax = (2^24-1)/2^24
+
+xMax^2 / 2^32 =
+
+
+Point B:
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] |  Uint32Arr[0] |
+|exp|     x     |     fx^2      |
+
+uint32[0] >>>=7
+
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] |  Uint32Arr[0] |
+|exp|     x     | 0 |   2fx^2   |
+
+
+uint32[0] = uint32[1] - uint32[0]
+
+Result:
+| B | B | B | B | B | B | B | B |
+| Float32Arr[1] |  Uint32Arr[0] |
+|exp|     x     |exp| x-2fx^2   |
+
+
+uint8[3] &= ~1 (makes exp even)
+uint32[0] >>>= 1
+uint32[0] += 32bitbias/2
+
+guess_next = (guess^2 + t^2)/2guess
+
+For t^2 from 1. to 2.
+1+x_next = (1+x_i + t^2 / (1+x_i)) / 2
+
+1 + x_next = ((1+x_i)^2 + 1+t_x) / 2(1+x_i)
+1 + x_next = (2 + 2x_i + t_x + x_i^2) / 2(1+x_i)
+x_next = (t_x + x_i^2) / (2+2x_i)
+x = t_x/2 ?
+x_next = t_x(1+tx/4)/(2+tx) = (t_x/2)*(4+tx)/(4+2tx)
+x_next = tx/2 (1 -tx/(4+2tx))
+x_next = tx/2 (1 -(tx/2)/(1+(tx/2))/2)
+x_next = x(1 - x / (2+2x))
+ = x(2+x)/(2+2x)
+ = (x^2 + 2x)/(2x+2)
+t_x = 0 --> x_next = 0
+t_x = 1 --> x_next = 1/2 - (1/4)^2/(3/2)/2 = 5/12
+
+For t^2 = 2^(2n+b)(1+t_x)
+1st guess = 2^(n)2^(b/2)(1+t_x/2)
+(2^n)2^(b/2)(1+x_n) = (2^(2n+b)(1 + 2x + x^2) + 2^(2n+b)(1+t_x))/(2 * (2^n)2^(b/2)(1+x)
+(1+x_n) = (2 + 2x + x^2 +tx)/(2(1+x))
+x_n = (x^2+tx)/(2+2x)
+
+
+For t^2 from 2. to 4.
+1 + x_next = ((1+x)^2 + 2(1+t_x)) / 2(1+x)
+1 + x_next = (1 + 2x + x^2 + 2 +2t_x) / 2(1+x)
+x_next = (1 + x^2 + 2tx) / (2+2x)
+if x = (tx+1)/2 ==> tx = 2x-1
+x_next = 1 + x^2 + 2(2x-1)
+x_next = (-1 + x^2 + 4x) / (2+2x)
+x_next = (x^2 + 4x - 1) / (2+2x)
+         (x^2 + 2x)/(2x+2) + (2x-1) / (2x+2)
+
+
+x_next = (x^2 + 2x)/(2x+2) + (b)(2x-1)/(2x+2)
+       = (x^2 + 2x)/(2x+2) + b tx / (tx+3)
+
+x = (b+tx)/2
+
+
+
+(1 -x +x^2 -x^3 +x^4 + ...) * (1+x) = 1
 
 
