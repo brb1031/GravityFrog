@@ -4,6 +4,10 @@ Math.absoluteTol = 1E-8;
 Math.isClose = function(a, b){
   //Based on Numpy implementation:
   //http://docs.scipy.org/doc/numpy-dev/reference/generated/numpy.isclose.html
-  return (Math.abs(a-b) <= Math.absoluteTol + Math.relativeTol * Math.abs(b));
+  if(a != a){
+    return (b != b);//Return true is both are NaN
+  }else{
+    return (Math.abs(a-b) <= Math.absoluteTol + Math.relativeTol * Math.abs(b));
+  }
 };
 
