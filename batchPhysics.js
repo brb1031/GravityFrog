@@ -153,6 +153,10 @@ BruteFrog.prototype.fasterSqrts = function(xSq, x){
   var x16Byte0 = new Int16Array(x.buffer, 0);
   var x16Byte2 = new Int16Array(x.buffer, 2);
 
+
+  var x16Unsigned = new Uint16Array(x.buffer, 0);
+
+
 	var i;
 
 
@@ -164,27 +168,30 @@ BruteFrog.prototype.fasterSqrts = function(xSq, x){
 	for (i = 0; i < x32IntLo.length; i+=2){
     //Set sign bit to zero.
     x32IntLo[i] &= 0x7fffffff;
+    // var sign = (x32IntLo[i] > 0) - (x32IntLo[i] < 0);
+    // s == 0: leave alone
+    // s == 1: x32IntLo[i] |= 0xff<<23
+
 
     // Guess such that bias+exp/2 is in higher 16 bits
     // (exp%2, Mantissa) in lower 16 bits
+    var bias = 0x3f800000;
 
-    x32IntLo[i] += 0x3f800000;
+    x32IntLo[i] += bias;
     x32IntLo[i] >>>= 8;
     x32IntHi[i] = x32IntLo[i];
-    // exp/2, (b+x)/2
-
 
 		//2nd Order correction:
     x32IntLo[i] = (x16Byte0[2*i] * x16Byte0[2*i]);
     x32IntLo[i] = 22488 * x16Byte2[2*i];
-    x32IntLo[i] >>>= 16;
+    x32IntLo[i] = x16Byte2[2*i];
     // lo has 0, f(x-b)^2
 
     x32UnsignedLo[i] = x32UnsignedHi[i] - x32UnsignedLo[i];
     // lo has n, (b+x)/2-f(x-b)^2
+    // hi has n, (b+x)/2
 
     x32FloatHi[i]  = xSq[i/2];
-    // hi has 2n+b, x & 0xfffe, fucked up bias.
     x32IntLo[i] <<= 7;
 
 		//Perform Newton's method on 32bit float.
