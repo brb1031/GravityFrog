@@ -136,10 +136,24 @@ BruteFrog.prototype.fasterSqrts = function(xSq, x){
 	//32 bits has lo = offset, hi = offset+1
 
 	// var xSqBitLo = new Uint32Array(x.buffer, 0);
- //  var xSqBitHi = new Uint32Array(x.buffer, 4);
+  //  var xSqBitHi = new Uint32Array(x.buffer, 4);
 
   // var inputByteLength = xSq.length*xSq.BYTES_PER_ELEMENT;
+/*
+Float64:
+| B | B | B | B | B | B | B | B |
+|s exp|  frac   |    frac       |
 
+2 x Float32:
+| B | B | B | B | B | B | B | B |
+|sexp|   frac   |sexp|   frac   |
+
+(uint 32 + bias_32 << 23 (0x3f800000))
+Intermediate float32:
+| B | B | B | B |
+| n |(b+frac)/2 |
+Where exp = 2n+b
+*/
 
   var x32FloatLo = new Float32Array(x.buffer, 0);
   var x32FloatHi = new Float32Array(x.buffer, 4);
@@ -150,18 +164,14 @@ BruteFrog.prototype.fasterSqrts = function(xSq, x){
   var x32IntLo = new Int32Array(x.buffer, 0);
   var x32IntHi = new Int32Array(x.buffer, 4);
 
-  var x16Byte0 = new Int16Array(x.buffer, 0);
-  var x16Byte2 = new Int16Array(x.buffer, 2);
-
-
-  var x16Unsigned = new Uint16Array(x.buffer, 0);
-
+  var x16Ints = new Int16Array(x.buffer, 0);
 
 	var i;
 
-
+  //Interleaved approach, cast to 32bit float
 	for(i = 0; i < xSq.length; i++){
 		x32FloatLo[2*i] = xSq[i];
+    x32IntLo[2*i] += 0x3f800000;
 	}
 
 
@@ -179,31 +189,24 @@ BruteFrog.prototype.fasterSqrts = function(xSq, x){
     // s == 0: leave alone
     // s == 1: x32IntLo[i] |= 0xff<<23
 
+    x32IntHi[i] = x32IntLo[i];//| n | (frac+b)/2     |
 
-    // Guess such that bias+exp/2 is in higher 16 bits
-    // (exp%2, Mantissa) in lower 16 bits
-    var bias = 0x3f800000;
-
-    x32IntLo[i] += bias;
-    x32IntLo[i] >>>= 8;
-    x32IntHi[i] = x32IntLo[i];
+    x32IntLo[i] <<= 8; //| (frac-b)/2 |0|
 
 		//2nd Order correction:
-    x32IntLo[i] = (x16Byte0[2*i] * x16Byte0[2*i]);
-    x32IntLo[i] = 22488 * x16Byte2[2*i];
-    x32IntLo[i] = x16Byte2[2*i];
-    // lo has 0, f(x-b)^2
+    x32IntLo[i] = x16Ints[2*i+2] * x16Ints[2*i+2];
+    x32IntLo[i] = 22488 * x16Ints[2*i+2];
+    x32IntLo[i] >>>= 8;//| 0 |  2ndorder    |
 
-    x32UnsignedLo[i] = x32UnsignedHi[i] - x32UnsignedLo[i];
-    // lo has n, (b+x)/2-f(x-b)^2
-    // hi has n, (b+x)/2
+    x32UnsignedLo[i] = x32UnsignedHi[i];// - x32UnsignedLo[i];
+    //| n | (frac+b)/2 - 2ndorder |
+    x32IntLo[i] >>>= 1;
 
-    x32FloatHi[i]  = xSq[i/2];
-    x32IntLo[i] <<= 7;
+
 
 		//Perform Newton's method on 32bit float.
+    x32IntHi -= 0x3f800000;
 		x32FloatLo[i] += x32FloatHi[i] / x32FloatLo[i];
-    // x32FloatLo[i] /= 2;
 		x32UnsignedLo[i] -= 0x00800000;
 	}
 
