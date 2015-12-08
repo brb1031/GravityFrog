@@ -22,7 +22,6 @@ SquareRootTests = function(numSamples){
     f[i] /= (1-f[i]);
   }
   f = new Float64Array(f);
-  fbits = new Uint32Array(f.buffer);
 
   console.log("Float64Array map Math.sqrt() calculating...\n");
   fSquareRootExact = f.map(Math.sqrt);
@@ -30,7 +29,7 @@ SquareRootTests = function(numSamples){
 
 
   //Pre-allocate:
-  fMySquareRoot = new Float64Array(numSamples);
+  fMySquareRoot = new Float64Array(f.length);
 
   console.log("Custom Sqrt calculating...\n");
   BruteFrog.prototype.fasterSqrts(f, fMySquareRoot);
@@ -46,9 +45,9 @@ SquareRootTests = function(numSamples){
   return passed;
 };
 
-numSamples = 1E6;
+numSamples = 30;
 if (SquareRootTests(numSamples)){
-  document.write("Square Root Tests passed with sample size "+ numSamples +".");
+  document.write("Square Root Tests passed with sample size "+ f.length +".");
 } else {
   document.write("Some Square Root Tests failed.");
 }
