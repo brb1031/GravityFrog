@@ -6,11 +6,21 @@ SquareRootTests = function(numSamples){
   }
 
   var f = [];
+
+  f.push(0);
+  f.push(-1);
+  f.push(-2);
+  f.push(-4);
+  f.push(-NaN);
+  f.push(NaN);
+
+  f.push(Infinity);
+  f.push(-Infinity);
+
   for(i=0; i < numSamples; i++){
     f.push(Math.random());
     f[i] /= (1-f[i]);
   }
-
   f = new Float64Array(f);
   fbits = new Uint32Array(f.buffer);
 
