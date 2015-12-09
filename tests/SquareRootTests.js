@@ -38,7 +38,7 @@ SquareRootTests = function(numSamples){
   for(i = 0; i < numSamples; i++){
     if (!Math.isClose(fSquareRootExact[i], fMySquareRoot[i])){
       numFailed ++;
-      console.log(f[i].toPrecision(4) + ", " + fSquareRootExact[i].toPrecision(4) + ", " + fMySquareRoot[i].toPrecision(4));
+      console.log("Element" + i + ": " +f[i].toPrecision(4) + ", " + fSquareRootExact[i].toPrecision(4) + ", " + fMySquareRoot[i].toPrecision(4));
     }
   }
 
