@@ -35,10 +35,10 @@ SquareRootTests = function(numSamples){
   BruteFrog.prototype.fasterSqrts(f, fMySquareRoot);
   console.log("Done.\n");
 
-  for(i = 0; i < numSamples; i++){
+  for(i = 0; i < f.length; i++){
     if (!Math.isClose(fSquareRootExact[i], fMySquareRoot[i])){
       numFailed ++;
-      console.log("Element" + i + ": " +f[i].toPrecision(4) + ", " + fSquareRootExact[i].toPrecision(4) + ", " + fMySquareRoot[i].toPrecision(4));
+      console.log("Element " + i + ": " +f[i].toPrecision(4) + ", " + fSquareRootExact[i].toPrecision(4) + ", " + fMySquareRoot[i].toPrecision(4));
     }
   }
 
