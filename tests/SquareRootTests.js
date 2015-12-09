@@ -1,6 +1,7 @@
 SquareRootTests = function(numSamples){
   var i;
   var numFailed = 0;
+  var numSpecialCases;
   if(numSamples < 2){
     numSamples = 3;
   }
@@ -11,13 +12,16 @@ SquareRootTests = function(numSamples){
   f.push(-1);
   f.push(-2);
   f.push(-4);
-  f.push(-NaN);
-  f.push(NaN);
 
-  f.push(-Infinity);
-  f.push(Infinity);
+  f.push(-Number.NaN);
+  f.push( Number.NaN);
 
-  for(i=0; i < numSamples; i++){
+  f.push(Number.POSITIVE_INFINITY);
+  f.push(Number.NEGATIVE_INFINITY);
+
+  numSpecialCases = f.length;
+  numSamples += numSpecialCases;
+  for(i=numSpecialCases; i < numSamples; i++){
     f.push(Math.random());
     f[i] /= (1-f[i]);
   }
@@ -35,10 +39,10 @@ SquareRootTests = function(numSamples){
   BruteFrog.prototype.fasterSqrts(f, fMySquareRoot);
   console.log("Done.\n");
 
-  for(i = 0; i < f.length; i++){
+  for(i = 0; i < f.length; i += 1){
     if (!Math.isClose(fSquareRootExact[i], fMySquareRoot[i])){
-      numFailed ++;
-      console.log("Element " + i + ": " +f[i].toPrecision(4) + ", " + fSquareRootExact[i].toPrecision(4) + ", " + fMySquareRoot[i].toPrecision(4));
+        console.log("Element " + i + ": " +f[i].toPrecision(4) + ", " + fSquareRootExact[i].toPrecision(4) + ", " + fMySquareRoot[i].toPrecision(4));
+        numFailed++;
     }
   }
 

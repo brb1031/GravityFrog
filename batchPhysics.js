@@ -173,14 +173,9 @@ BruteFrog.prototype.fasterSqrts = function (xSq, x) {
     }
 
     for (i = 0; i < x32IntLo.length; i += 2) {
-        if ((x32IntLo[i] & 0x7f800000) === 0x7f800000) {
-            x32IntLo[i] = ~0;
-            x32IntHi[i] = ~0;
-        } else if (x32FloatLo[i] < 0) {
-            x32IntLo[i] = ~0;
-            x32IntHi[i] = ~0;
-        } else {
-
+        x32IntLo[i] |= x32IntLo[i] >> 31;
+        // Input now either NaN, 0 <= x32IntLo[i], or +Infinity
+        if ((x32IntLo[i] & 0x7f800000) !== 0x7f800000) {
             // Guess such that bias+exp/2 is in higher 16 bits
             // (exp%2, Mantissa) in lower 16 bits
             x32IntLo[i] += 0x3f800000;
