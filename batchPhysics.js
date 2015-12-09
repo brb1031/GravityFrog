@@ -171,43 +171,56 @@ Where exp = 2n+b
   //Interleaved approach, cast to 32bit float
 	for(i = 0; i < xSq.length; i++){
 		x32FloatLo[2*i] = xSq[i];
-    x32IntLo[2*i] += 0x3f800000;
 	}
 
 
 	for (i = 0; i < x32IntLo.length; i+=2){
-      if (x32FloatLo[i] != x32FloatLo[i]){
+    if (x32FloatLo[i] != x32FloatLo[i]){
       continue;
     } else if (x32FloatLo[i] < 0){
       x32IntLo[i] = ~0;
       x32IntHi[i] = ~0;
       continue;
     }
-    //Set sign bit to zero.
-    // x32IntLo[i] &= 0x7fffffff;
-    // var sign = (x32IntLo[i] > 0) - (x32IntLo[i] < 0);
-    // s == 0: leave alone
-    // s == 1: x32IntLo[i] |= 0xff<<23
+    //Guarantees that sign bit is zero, allowing
+    //Top 9 bits to store the exponent.
+    x32UnsignedLo[i] += 0x3f800000;
+    //Float32
+    //Where exp = 2n + b, frac = (uint)mantissa / 2^(23)
+    //Top 9 bits contain: 2n+2bias + b
+    //Bottom 23 bits contain: mantissa
+    //Top _byte_ has n+bias
+    //Bottom 3 bytes have (b+frac)/2
 
-    x32IntHi[i] = x32IntLo[i];//| n | (frac+b)/2     |
 
-    x32IntLo[i] <<= 8; //| (frac-b)/2 |0|
+    x32IntHi[i] = x32IntLo[i];
+
+    x32IntLo[i] <<= 8;
+    //Top 3 bytes (as int) has (frac-b)/2
 
 		//2nd Order correction:
-    x32IntLo[i] = x16Ints[2*i+2] * x16Ints[2*i+2];
-    x32IntLo[i] = 22488 * x16Ints[2*i+2];
-    x32IntLo[i] >>>= 8;//| 0 |  2ndorder    |
+    x32UnsignedLo[i] = x16Ints[2*i+2] * x16Ints[2*i+2];
+    x32UnsignedLo[i] = 22488 * x16Ints[2*i+2];
+    x32UnsignedLo[i] >>>= 9;//| 0 |  4f((frac-b)/2)^2    |
 
-    x32UnsignedLo[i] = x32UnsignedHi[i];// - x32UnsignedLo[i];
-    //| n | (frac+b)/2 - 2ndorder |
+    //Top _byte_ has n+bias
+    //Bottom 3 bytes have (b+frac)/2
+
+    x32UnsignedLo[i] = x32UnsignedHi[i] - x32UnsignedLo[i];
+    //Top _byte_ has n+ bias
+    //Bottom 3 bytes have (b+frac)/2-f(frac-b)^2
     x32IntLo[i] >>>= 1;
-
-
+    //Top 9 bits has n+bias
+    //Bottom 23 bits has  (b+frac)/2-f(frac-b)^2
+    //x32Float[i] should have (2^n) * (1+ (b+frac)/2) - correction
 
 		//Perform Newton's method on 32bit float.
-    x32IntHi -= 0x3f800000;
-		x32FloatLo[i] += x32FloatHi[i] / x32FloatLo[i];
-		x32UnsignedLo[i] -= 0x00800000;
+    x32UnsignedHi[i] -= 0x3f800000;
+    //Top 9 bits has 2n+2bias+b - bias = 2n+b+bias
+    //Bottom 23 bits has frac
+
+		// x32FloatLo[i] += x32FloatHi[i] / x32FloatLo[i];
+		// x32UnsignedLo[i] -= 0x00800000;
 	}
 
 	for(i = 0; i < xSq.length; i++){
