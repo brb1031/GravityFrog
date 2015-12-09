@@ -1,6 +1,6 @@
 SquareRootTests = function(numSamples){
   var i;
-  var passed = true;
+  var numFailed = 0;
   if(numSamples < 2){
     numSamples = 3;
   }
@@ -37,17 +37,18 @@ SquareRootTests = function(numSamples){
 
   for(i = 0; i < numSamples; i++){
     if (!Math.isClose(fSquareRootExact[i], fMySquareRoot[i])){
-      passed = false;
+      numFailed ++;
       console.log(f[i].toPrecision(4) + ", " + fSquareRootExact[i].toPrecision(4) + ", " + fMySquareRoot[i].toPrecision(4));
     }
   }
 
-  return passed;
+  return {numFailed:numFailed, numSamples:f.length};
 };
 
 numSamples = 30;
-if (SquareRootTests(numSamples)){
-  document.write("Square Root Tests passed with sample size "+ f.length +".");
+var testResults = SquareRootTests(numSamples);
+if (testResults.numFailed){
+  document.write("" + testResults.numFailed + " Square Root Tests out of " +testResults.numSamples+ " failed.");
 } else {
-  document.write("Some Square Root Tests failed.");
+  document.write("Square Root Tests passed with sample size "+ testResults.numSamples +".");
 }
