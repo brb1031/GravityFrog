@@ -166,8 +166,15 @@ BruteFrog.prototype.fasterSqrts = function(xSq, x){
 
 
 	for (i = 0; i < x32IntLo.length; i+=2){
+      if (x32FloatLo[i] != x32FloatLo[i]){
+      continue;
+    } else if (x32FloatLo[i] < 0){
+      x32IntLo[i] = ~0;
+      x32IntHi[i] = ~0;
+      continue;
+    }
     //Set sign bit to zero.
-    x32IntLo[i] &= 0x7fffffff;
+    // x32IntLo[i] &= 0x7fffffff;
     // var sign = (x32IntLo[i] > 0) - (x32IntLo[i] < 0);
     // s == 0: leave alone
     // s == 1: x32IntLo[i] |= 0xff<<23
