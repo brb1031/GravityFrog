@@ -45,7 +45,7 @@ SquareRootTests = function(numSamples){
   return {numFailed:numFailed, numSamples:f.length};
 };
 
-var numSamples  = 6E6;
+var numSamples  = 25;
 var testResults = SquareRootTests(numSamples);
 if (testResults.numFailed){
   document.write("" + testResults.numFailed + " Square Root Tests out of " +testResults.numSamples+ " failed.");
