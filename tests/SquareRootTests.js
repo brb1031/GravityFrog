@@ -14,22 +14,22 @@ SquareRootTests = function(numSamples){
   f.push(-NaN);
   f.push(NaN);
 
-  f.push(Infinity);
   f.push(-Infinity);
+  f.push(Infinity);
 
   for(i=0; i < numSamples; i++){
     f.push(Math.random());
     f[i] /= (1-f[i]);
   }
   f = new Float64Array(f);
+  //Pre-allocate:
+  fMySquareRoot = new Float64Array(f.length);
 
   console.log("Float64Array map Math.sqrt() calculating...\n");
   fSquareRootExact = f.map(Math.sqrt);
   console.log("Done.\n");
 
 
-  //Pre-allocate:
-  fMySquareRoot = new Float64Array(f.length);
 
   console.log("Custom Sqrt calculating...\n");
   BruteFrog.prototype.fasterSqrts(f, fMySquareRoot);
@@ -45,7 +45,7 @@ SquareRootTests = function(numSamples){
   return {numFailed:numFailed, numSamples:f.length};
 };
 
-numSamples = 6E6;
+var numSamples  = 6E6;
 var testResults = SquareRootTests(numSamples);
 if (testResults.numFailed){
   document.write("" + testResults.numFailed + " Square Root Tests out of " +testResults.numSamples+ " failed.");
