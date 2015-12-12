@@ -166,13 +166,17 @@ BruteFrog.prototype.fasterSqrts = function (xSq, x) {
     var x16Byte2 = new Int16Array(x.buffer, 2);
 
     var i;
-
+    var numElements;
     //Interleaved approach, cast to 32bit float
-    for (i = 0; i < xSq.length; i += 1) {
+
+    numElements = xSq.length;
+    for (i = 0; i < numElements; i += 1) {
         x32FloatLo[2 * i] = xSq[i];
     }
 
-    for (i = 0; i < x32IntLo.length; i += 2) {
+
+    numElements = x32IntLo.length;
+    for (i = 0; i < numElements; i += 2) {
         x32IntLo[i] |= x32IntLo[i] >> 31;
         // Input now either NaN, 0 <= x32IntLo[i], or +Infinity
         if ((x32IntLo[i] & 0x7f800000) !== 0x7f800000) {
@@ -202,7 +206,8 @@ BruteFrog.prototype.fasterSqrts = function (xSq, x) {
         }
     }
 
-    for (i = 0; i < xSq.length; i += 1) {
+    numElements = xSq.length;
+    for (i = 0; i < numElements; i += 1) {
         //One 64-bit refinement:
         // x[i] = (x32FloatHi[2 * i]+ xSq[i]/x32FloatHi[2 * i])/2;
         x[i] = x32FloatLo[2 * i];
