@@ -40,7 +40,10 @@ var squareRootTests = function SquareRootTests(numRandomSamples) {
 
     stopWatch = new Date();
     var fSquareRootExact = f.map(Math.sqrt);
-    timings.push({testName: "Float64Array.map( Math.sqrt )", testTime: new Date() - stopWatch});
+    timings.push({testName: "Float64Array.map(Math.sqrt)", testTime: new Date() - stopWatch});
+
+
+
 
     stopWatch = new Date();
     for (i = 0; i < f.length; i += 1) {
@@ -49,8 +52,20 @@ var squareRootTests = function SquareRootTests(numRandomSamples) {
     timings.push({testName: "for loop on Math.sqrt(Float64Array[i])", testTime: new Date() - stopWatch});
 
     stopWatch = new Date();
+    var iMax = f.length;
+    for (i = 0; i < iMax; i += 1) {
+        fSquareRootExact[i] = Math.sqrt(f[i]);
+    }
+    timings.push({testName: "for loop with cached length on Math.sqrt(Float64Array[i])", testTime: new Date() - stopWatch});
+
+
+
+    stopWatch = new Date();
     BruteFrog.prototype.fasterSqrts(f, fMySquareRoot);
     timings.push({testName: "BruteFrog.fasterSqrts()", testTime: new Date() - stopWatch});
+
+
+
 
     stopWatch = new Date();
     for (i = 0; i < f.length; i += 8) {
