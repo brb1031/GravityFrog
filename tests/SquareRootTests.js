@@ -33,7 +33,13 @@ SquareRootTests = function(numSamples){
 
   stopWatch = new Date();
   fSquareRootExact = f.map(Math.sqrt);
-  timings.push({testName: "Float64Array map Math.sqrt()", testTime: new Date() - stopWatch});
+  timings.push({testName: "Float64Array.map( Math.sqrt )", testTime: new Date() - stopWatch});
+
+  stopWatch = new Date();
+  for(i = 0; i < f.length; i++){
+    fSquareRootExact[i] = Math.sqrt(f[i]);
+  }
+  timings.push({testName: "for loop on Math.sqrt(Float64Array[i])", testTime: new Date() - stopWatch});
 
   stopWatch = new Date();
   BruteFrog.prototype.fasterSqrts(f, fMySquareRoot);
