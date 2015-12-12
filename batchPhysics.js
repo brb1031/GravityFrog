@@ -227,3 +227,38 @@ BruteFrog.prototype.fasterSqrts = function (xSq, x) {
         x[i + 7] = x32FloatLo[2 * i + 14];
     }
 };
+
+BruteFrog.prototype.simpleSqrts = function (xSq, x) {
+    "use strict";
+    //Assume 64 bits,
+    var xSqInt32 = new Int32Array(xSq.buffer, 0);
+    var xInt32 = new Int32Array(x.buffer, 0);
+    var i;
+    var numElements;
+
+
+    numElements = 2 * xSq.length;
+
+    // for (i = 1; i < numElements; i += 2) {
+    //     xInt32[i + 0] = (xSqInt32[i + 0] >> 1) + 0x1ff80000;
+    // }
+    for (i = 1; i < numElements; i += 16) {
+        xInt32[i + 0] = (xSqInt32[i + 0] >> 1) + 0x1ff80000;
+        xInt32[i + 2] = (xSqInt32[i + 2] >> 1) + 0x1ff80000;
+        xInt32[i + 4] = (xSqInt32[i + 4] >> 1) + 0x1ff80000;
+        xInt32[i + 6] = (xSqInt32[i + 6] >> 1) + 0x1ff80000;
+        xInt32[i + 8] = (xSqInt32[i + 8] >> 1) + 0x1ff80000;
+        xInt32[i + 10] = (xSqInt32[i + 10] >> 1) + 0x1ff80000;
+        xInt32[i + 12] = (xSqInt32[i + 12] >> 1) + 0x1ff80000;
+        xInt32[i + 14] = (xSqInt32[i + 14] >> 1) + 0x1ff80000;
+    }
+
+    numElements = xSq.length;
+    for (i = 0; i < numElements; i += 1) {
+        x[i] += xSq[i] / x[i];
+        x[i] /= 2;
+        x[i] += xSq[i] / x[i];
+        x[i] /= 2;
+    //
+    }
+};
