@@ -7,8 +7,10 @@ SquareRootTests = function(numSamples){
   }
 
   var f = [];
+  var timings = [];
+  var stopWatch;
 
-  f.push(0);
+  f.push( 0);
   f.push(-1);
   f.push(-2);
   f.push(-4);
@@ -29,15 +31,13 @@ SquareRootTests = function(numSamples){
   //Pre-allocate:
   fMySquareRoot = new Float64Array(f.length);
 
-  console.log("Float64Array map Math.sqrt() calculating...\n");
+  stopWatch = new Date();
   fSquareRootExact = f.map(Math.sqrt);
-  console.log("Done.\n");
+  timings.push({testName: "Float64Array map Math.sqrt()", testTime: new Date() - stopWatch});
 
-
-
-  console.log("Custom Sqrt calculating...\n");
+  stopWatch = new Date();
   BruteFrog.prototype.fasterSqrts(f, fMySquareRoot);
-  console.log("Done.\n");
+  timings.push({testName: "BruteFrog.fasterSqrts()", testTime: new Date() - stopWatch});
 
   for(i = 0; i < f.length; i += 1){
     if (!Math.isClose(fSquareRootExact[i], fMySquareRoot[i])){
@@ -46,11 +46,18 @@ SquareRootTests = function(numSamples){
     }
   }
 
+  for (i = 0; i < timings.length; i++){
+    console.log("Test name: " + timings[i].testName);
+    console.log("Time (ms): " + timings[i].testTime);
+  }
+
   return {numFailed:numFailed, numSamples:f.length};
 };
 
-var numSamples  = 25;
+
+var numSamples  = 1E6;
 var testResults = SquareRootTests(numSamples);
+
 if (testResults.numFailed){
   document.write("" + testResults.numFailed + " Square Root Tests out of " +testResults.numSamples+ " failed.");
 } else {
