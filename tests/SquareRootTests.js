@@ -1,58 +1,99 @@
-SquareRootTests = function(numSamples){
-  var i;
-  var numFailed = 0;
-  var numSpecialCases;
-  if(numSamples < 2){
-    numSamples = 3;
-  }
+var squareRootTests = function SquareRootTests(numRandomSamples) {
+    "use strict";
+    var i;
+    var numSpecialCases;
+    var numRandomFailed = 0;
+    var numFailed = 0;
 
-  var f = [];
+    var f = [];
+    var timings = [];
+    var stopWatch;
 
-  f.push(0);
-  f.push(-1);
-  f.push(-2);
-  f.push(-4);
+    f.push(0);
+    f.push(-1);
+    f.push(-2);
+    f.push(-4);
 
-  f.push(-Number.NaN);
-  f.push( Number.NaN);
+    f.push(-Number.NaN);
+    f.push(Number.NaN);
 
-  f.push(Number.POSITIVE_INFINITY);
-  f.push(Number.NEGATIVE_INFINITY);
+    f.push(Number.POSITIVE_INFINITY);
+    f.push(Number.NEGATIVE_INFINITY);
 
-  numSpecialCases = f.length;
-  numSamples += numSpecialCases;
-  for(i=numSpecialCases; i < numSamples; i++){
-    f.push(Math.random());
-    f[i] /= (1-f[i]);
-  }
-  f = new Float64Array(f);
-  //Pre-allocate:
-  fMySquareRoot = new Float64Array(f.length);
+    numSpecialCases = f.length;
 
-  console.log("Float64Array map Math.sqrt() calculating...\n");
-  fSquareRootExact = f.map(Math.sqrt);
-  console.log("Done.\n");
-
-
-
-  console.log("Custom Sqrt calculating...\n");
-  BruteFrog.prototype.fasterSqrts(f, fMySquareRoot);
-  console.log("Done.\n");
-
-  for(i = 0; i < f.length; i += 1){
-    if (!Math.isClose(fSquareRootExact[i], fMySquareRoot[i])){
-        console.log("Element " + i + ": " +f[i].toPrecision(4) + ", " + fSquareRootExact[i].toPrecision(4) + ", " + fMySquareRoot[i].toPrecision(4));
-        numFailed++;
+    for (i = 0; i < numRandomSamples; i += 1) {
+        f.push(Math.random());
+        f[i] /= (1 - f[i]);
     }
-  }
+    //Padding:
 
-  return {numFailed:numFailed, numSamples:f.length};
+    var numPadding = (f.length + 1) % 8 - 1;
+
+    for (i = 0; i < numPadding; i += 1) {
+        f.push(0);
+    }
+
+    f = new Float64Array(f);
+    //Pre-allocate:
+    var fMySquareRoot = new Float64Array(f.length);
+
+    stopWatch = new Date();
+    var fSquareRootExact = f.map(Math.sqrt);
+    timings.push({testName: "Float64Array.map( Math.sqrt )", testTime: new Date() - stopWatch});
+
+    stopWatch = new Date();
+    for (i = 0; i < f.length; i += 1) {
+        fSquareRootExact[i] = Math.sqrt(f[i]);
+    }
+    timings.push({testName: "for loop on Math.sqrt(Float64Array[i])", testTime: new Date() - stopWatch});
+
+    stopWatch = new Date();
+    BruteFrog.prototype.fasterSqrts(f, fMySquareRoot);
+    timings.push({testName: "BruteFrog.fasterSqrts()", testTime: new Date() - stopWatch});
+
+
+    var numRandomDisplay = 20;
+    for (i = numSpecialCases; i < f.length; i += 1) {
+        if (!Math.isClose(fSquareRootExact[i], fMySquareRoot[i])) {
+            numRandomFailed += 1;
+            if (numRandomDisplay) {
+                numRandomDisplay -= 1;
+                console.log("Element " + i + ": " + f[i].toPrecision(4) + ", " + fSquareRootExact[i].toPrecision(4) + ", " + fMySquareRoot[i].toPrecision(4));
+            }
+        }
+    }
+
+    for (i = 0; i < numSpecialCases; i += 1) {
+        if (!Math.isClose(fSquareRootExact[i], fMySquareRoot[i])) {
+            console.log("Special Case: " + f[i].toPrecision(4) + ", " + fSquareRootExact[i].toPrecision(4) + ", " + fMySquareRoot[i].toPrecision(4));
+            numFailed += 1;
+        }
+    }
+    numFailed += numRandomFailed;
+
+    for (i = 0; i < timings.length; i += 1) {
+        console.log("Test name: " + timings[i].testName);
+        console.log("Time (ms): " + timings[i].testTime);
+    }
+
+    return {numFailed: numFailed, numRandomSamples: numRandomSamples, numSpecialCases: numSpecialCases};
 };
 
-var numSamples  = 25;
-var testResults = SquareRootTests(numSamples);
-if (testResults.numFailed){
-  document.write("" + testResults.numFailed + " Square Root Tests out of " +testResults.numSamples+ " failed.");
+
+var numRandomSamples = 1E6;
+var testResults = squareRootTests(numRandomSamples);
+var logMessage;
+var lineEnd = "<br>";
+
+if (testResults.numFailed) {
+    logMessage = "FAIL: Brutefrog.fasterSqrts() gave incorrect results." + lineEnd;
+    logMessage += "Total number of failures: " + testResults.numFailed + lineEnd;
 } else {
-  document.write("Square Root Tests passed with sample size "+ testResults.numSamples +".");
+    logMessage = "PASS: Brutefrog.fasterSqrts() passed." + lineEnd;
 }
+
+logMessage += "Number of special cases: " + testResults.numSpecialCases + lineEnd;
+logMessage += "Number of random nonnegative inputs: " + testResults.numRandomSamples + lineEnd;
+
+document.write(logMessage);
