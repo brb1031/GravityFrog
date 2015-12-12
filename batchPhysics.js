@@ -227,3 +227,24 @@ BruteFrog.prototype.fasterSqrts = function (xSq, x) {
         x[i + 7] = x32FloatLo[2 * i + 14];
     }
 };
+
+BruteFrog.prototype.simpleSqrts = function (xSq, x) {
+    "use strict";
+    //Assume 64 bits,
+    var xSqInt32 = new Int32Array(xSq.buffer, 0);
+    var xInt32 = new Int32Array(x.buffer, 0);
+    var i;
+    var numElements;
+
+    numElements = 2 * xSq.length;
+    for (i = 0; i < numElements; i += 2) {
+        xInt32[i + 0] = xSqInt32[i + 0] >> 1;
+        xInt32[i + 0] += 0x1ff80000;
+    }
+
+    numElements = xSq.length;
+    for (i = 0; i < numElements; i += 1) {
+        x[i + 0] += xSq[i + 0] / x[i + 0];
+        x[i + 0] /= 2;
+    }
+};
