@@ -170,8 +170,15 @@ BruteFrog.prototype.fasterSqrts = function (xSq, x) {
     //Interleaved approach, cast to 32bit float
 
     numElements = xSq.length;
-    for (i = 0; i < numElements; i += 1) {
-        x32FloatLo[2 * i] = xSq[i];
+    for (i = 0; i < numElements; i += 8) {
+        x32FloatLo[2 * i + 0] = xSq[i + 0];
+        x32FloatLo[2 * i + 2] = xSq[i + 1];
+        x32FloatLo[2 * i + 4] = xSq[i + 2];
+        x32FloatLo[2 * i + 6] = xSq[i + 3];
+        x32FloatLo[2 * i + 8] = xSq[i + 4];
+        x32FloatLo[2 * i + 10] = xSq[i + 5];
+        x32FloatLo[2 * i + 12] = xSq[i + 6];
+        x32FloatLo[2 * i + 14] = xSq[i + 7];
     }
 
 
@@ -207,9 +214,16 @@ BruteFrog.prototype.fasterSqrts = function (xSq, x) {
     }
 
     numElements = xSq.length;
-    for (i = 0; i < numElements; i += 1) {
+    for (i = 0; i < numElements; i += 8) {
         //One 64-bit refinement:
         // x[i] = (x32FloatHi[2 * i]+ xSq[i]/x32FloatHi[2 * i])/2;
-        x[i] = x32FloatLo[2 * i];
+        x[i + 0] = x32FloatLo[2 * i + 0];
+        x[i + 1] = x32FloatLo[2 * i + 2];
+        x[i + 2] = x32FloatLo[2 * i + 4];
+        x[i + 3] = x32FloatLo[2 * i + 6];
+        x[i + 4] = x32FloatLo[2 * i + 8];
+        x[i + 5] = x32FloatLo[2 * i + 10];
+        x[i + 6] = x32FloatLo[2 * i + 12];
+        x[i + 7] = x32FloatLo[2 * i + 14];
     }
 };
