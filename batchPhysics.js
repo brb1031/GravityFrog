@@ -236,15 +236,18 @@ BruteFrog.prototype.simpleSqrts = function (xSq, x) {
     var i;
     var numElements;
 
+
     numElements = 2 * xSq.length;
-    for (i = 0; i < numElements; i += 2) {
-        xInt32[i + 0] = xSqInt32[i + 0] >> 1;
-        xInt32[i + 0] += 0x1ff80000;
+    for (i = 1; i < numElements; i += 2) {
+        xInt32[i + 0] = (xSqInt32[i + 0] >> 1) + 0x1ff80000;
     }
+
+
+
 
     numElements = xSq.length;
     for (i = 0; i < numElements; i += 1) {
-        x[i + 0] += xSq[i + 0] / x[i + 0];
-        x[i + 0] /= 2;
+        x[i] = (x[i] * x[i] + xSq[i]) / (2 * x[i]);
+        x[i] = (x[i] * x[i] + xSq[i]) / (2 * x[i]);
     }
 };

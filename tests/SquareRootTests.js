@@ -1,13 +1,16 @@
 var squareRootTests = function SquareRootTests(numRandomSamples) {
     "use strict";
     var i;
-    var numSpecialCases;
+    var numSpecialCases = 0;
     var numRandomFailed = 0;
     var numFailed = 0;
+    var fSquareRootExact;
 
     var f = [];
     var timings = [];
     var stopWatch;
+
+    var bFrog = new BruteFrog(0);
 
     f.push(0);
     f.push(-1);
@@ -26,8 +29,8 @@ var squareRootTests = function SquareRootTests(numRandomSamples) {
         f.push(Math.random());
         f[i] /= (1 - f[i]);
     }
-    //Padding:
 
+    //Padding:
     var numPadding = (f.length + 1) % 8 - 1;
 
     for (i = 0; i < numPadding; i += 1) {
@@ -38,9 +41,15 @@ var squareRootTests = function SquareRootTests(numRandomSamples) {
     //Pre-allocate:
     var fMySquareRoot = new Float64Array(f.length);
 
+
+
+
+
     stopWatch = new Date();
-    var fSquareRootExact = f.map(Math.sqrt);
+    fSquareRootExact = f.map(Math.sqrt);
     timings.push({testName: "Float64Array.map(Math.sqrt)", testTime: new Date() - stopWatch});
+
+
 
 
 
@@ -50,6 +59,11 @@ var squareRootTests = function SquareRootTests(numRandomSamples) {
         fSquareRootExact[i] = Math.sqrt(f[i]);
     }
     timings.push({testName: "for loop on Math.sqrt(Float64Array[i])", testTime: new Date() - stopWatch});
+
+
+
+
+
 
     stopWatch = new Date();
     var iMax = f.length;
@@ -61,8 +75,8 @@ var squareRootTests = function SquareRootTests(numRandomSamples) {
 
 
     stopWatch = new Date();
-    BruteFrog.prototype.fasterSqrts(f, fMySquareRoot);
-    timings.push({testName: "BruteFrog.fasterSqrts()", testTime: new Date() - stopWatch});
+    bFrog.simpleSqrts(f, fMySquareRoot);
+    timings.push({testName: "BruteFrog.simpleSqrts()", testTime: new Date() - stopWatch});
 
 
 
@@ -80,8 +94,12 @@ var squareRootTests = function SquareRootTests(numRandomSamples) {
     }
     timings.push({testName: "Unrolled for loop on Math.sqrt(Float64Array[i])", testTime: new Date() - stopWatch});
 
+
+
+
+
     var numRandomDisplay = 20;
-    for (i = numSpecialCases; i < f.length; i += 1) {
+    for (i = numSpecialCases; i < fSquareRootExact.length; i += 1) {
         if (!Math.isClose(fSquareRootExact[i], fMySquareRoot[i])) {
             numRandomFailed += 1;
             if (numRandomDisplay) {
@@ -114,10 +132,10 @@ var logMessage;
 var lineEnd = "<br>";
 
 if (testResults.numFailed) {
-    logMessage = "FAIL: Brutefrog.fasterSqrts() gave incorrect results." + lineEnd;
+    logMessage = "FAIL: Brutefrog.simpleSqrts() gave incorrect results." + lineEnd;
     logMessage += "Total number of failures: " + testResults.numFailed + lineEnd;
 } else {
-    logMessage = "PASS: Brutefrog.fasterSqrts() passed." + lineEnd;
+    logMessage = "PASS: Brutefrog.simpleSqrts() passed." + lineEnd;
 }
 
 logMessage += "Number of special cases: " + testResults.numSpecialCases + lineEnd;
