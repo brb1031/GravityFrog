@@ -4,47 +4,109 @@ Vector3d should pull from this kinematics buffer.
 And Particle will therefore see this transparently.
 */
     "use strict";
-    this.maxNumParticles = maxNumParticles;
+    var that = this;
+
+    this.numColumns = maxNumParticles;
+    this.N = this.numColumns;
+
     this.tView = Float64Array;
-    this.numRowElements = this.maxNumParticles;
-    this.numTableElements = this.maxNumParticles * this.maxNumParticles;
-    this.rowSize = this.numRowElements * this.tView.BYTES_PER_ELEMENT;
-    this.tableSize = this.numTableElements * this.tView.BYTES_PER_ELEMENT;
-    this.b = new ArrayBuffer(16 * this.rowSize);
-    this.allRows = new this.tView(this.b, 0);
 
-    var rowOffset = 0;
+    this.rowSize = this.numColumns * this.tView.BYTES_PER_ELEMENT;
 
-    this.x = new this.tView(this.b, rowOffset * this.rowSize);
-    rowOffset += 3;
+    function allocateTViewSpace(buffer, numElements) {
+        //Assumes buffer.nextByte exists and is initiallized to zero.
+        var bytesDesired = numElements * that.tView.BYTES_PER_ELEMENT;
 
-    this.v = new this.tView(this.b, rowOffset * this.rowSize);
-    rowOffset += 3;
+        var array = new that.tView(buffer,
+                buffer.nextByte,
+                numElements);
 
-    this.a = new this.tView(this.b, rowOffset * this.rowSize);
-    rowOffset += 3;
+        if (array !== undefined) {
+            buffer.nextByte += bytesDesired;
+        }
 
-    this.aOld = new this.tView(this.b, rowOffset * this.rowSize);
-    rowOffset += 3;
+        return array;
+    }
+
+    this.initializeWorkspace = function () {
+        this.numTableElements = this.numColumns * this.numColumns;
+        this.tableSize = this.numTableElements * this.tView.BYTES_PER_ELEMENT;
+
+        this.workBuffer = new ArrayBuffer(6 * this.tableSize);
+        this.workBuffer.nextByte = 0;
+
+        this.allTables = new this.tView(this.workBuffer);
+
+        this.forceTable = allocateTViewSpace(this.workBuffer,
+                3 * this.numTableElements);
+
+        this.forceStrengthTable = allocateTViewSpace(this.workBuffer,
+                1 * this.numTableElements);
+
+        this.distTable = allocateTViewSpace(this.workBuffer,
+                1 * this.numTableElements);
+
+        this.distSquareTable = allocateTViewSpace(this.workBuffer,
+                1 * this.numTableElements);
+    };
+
+    this.copy = function (includeWorkspace) {
+        includeWorkspace = includeWorkspace || false;
+        var frog = new BruteFrog(this.numColumns);
+
+        frog.allRows.set(this.allRows);
+
+        //Calculation buffers:
+        if (includeWorkspace && this.workBuffer) {
+            frog.initializeWorkspace();
+            frog.allTables.set(this.allTables);
+        }
+    };
+
+
+    this.b = new ArrayBuffer(13 * this.rowSize);
+    this.b.nextByte = 0;
+
+    this.allRows = new this.tView(this.b);
+
+    this.x = allocateTViewSpace(this.b, 3 * this.numColumns);
+    this.v = allocateTViewSpace(this.b, 3 * this.numColumns);
+    this.a = allocateTViewSpace(this.b, 3 * this.numColumns);
+    this.aOld = allocateTViewSpace(this.b, 3 * this.numColumns);
 
     this.aSwap = this.a;
+    this.m = allocateTViewSpace(this.b, this.numColumns);
 
-    this.m = new this.tView(this.b, rowOffset * this.rowSize);
-    rowOffset += 1;
+    this.workBuffer = null;
 
-    this.numRows = rowOffset;
-
-    this.forceStrengthTable = new this.tView(this.tableSize);
-    this.forceTable = new this.tView(3 * this.tableSize);
-    this.distTable = new this.tView(this.tableSize);
-    this.distSquareTable = new this.tView(this.tableSize);
 }
 
-BruteFrog.prototype.Leap = function () {
+
+BruteFrog.prototype.snapshot = function () {
+    // Copy only the current state of the particles.  Cannot be evolved.
+    "use strict";
+    var frog = this.copy();
+    frog.leap = function () {
+        return false;
+    };
+
+    frog.setGravityForce = function () {
+        return false;
+    };
+
+    return frog;
+};
+
+BruteFrog.prototype.clone = function () {
+    //Copy the current state along with workspace.
+    "use strict";
+    return this.copy(true);
+};
+
+BruteFrog.prototype.leap = function () {
 //Assumes acceleration calculation has been performed at least once.
     "use strict";
     var i;
-
     //Half step V.
     for (i = 0; i < 3 * this.N; i += 1) {
         this.v[i] += this.a[i];
@@ -59,7 +121,12 @@ BruteFrog.prototype.Leap = function () {
     this.a = this.aOld;
     this.aOld = this.aSwap;
 
-    this.prototype.batchCalcForces();
+    // if (this.workBuffer === null) {
+    //     debugger;
+    // }
+    this.setGravityForce();
+
+    // this.setExternalForce();
 
     //Half step V.
     for (i = 0; i < 3 * this.N; i += 1) {
@@ -68,21 +135,21 @@ BruteFrog.prototype.Leap = function () {
 };
 
 
-BruteFrog.prototype.batchCalcForces = function () {
+BruteFrog.prototype.setGravityForce = function () {
     "use strict";
     var i;
-    var rowOffset;
+    var row;
     var iScalar, iVector;
     var jScalar, jVector;
 
     //Set positions. (Bytes)
-    for (rowOffset = 0; rowOffset < 3 * this.tableSize; rowOffset += 3 * this.rowSize) {
-        this.forceTable.set(rowOffset, this.x);
+    for (row = 0; row < 3 * this.tableSize; row += 3 * this.rowSize) {
+        this.forceTable.set(this.x, row);
     }
 
     //Subtract self position to form vector pointing from self to every other:
-    for (iVector = 0; iVector < 3 * this.numTableElements; iVector += 3 * this.numRowElements) {
-        for (jVector = 0; jVector < 3 * this.numRowElements; jVector += 3) {
+    for (iVector = 0; iVector < 3 * this.numTableElements; iVector += 3 * this.numColumns) {
+        for (jVector = 0; jVector < 3 * this.numColumns; jVector += 3) {
             this.forceTable[iVector + jVector + 0] -= this.x[iVector + 0];
             this.forceTable[iVector + jVector + 1] -= this.x[iVector + 1];
             this.forceTable[iVector + jVector + 2] -= this.x[iVector + 2];
@@ -90,7 +157,7 @@ BruteFrog.prototype.batchCalcForces = function () {
     }
 
     //Calculate d^2
-    for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numRowElements) {
+    for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
         iVector = 3 * iScalar;
         for (jScalar = 0; jScalar < this.numTableElements; jScalar += 1) {
             jVector = 3 * jScalar;
@@ -100,29 +167,28 @@ BruteFrog.prototype.batchCalcForces = function () {
         }
     }
 
+    BruteFrog.prototype.sqrts(this.distSquareTable, this.distTable);
+
     for (i = 0; i < this.numTableElements; i += 1) {
-        this.distTable[i] = Math.sqrt(this.distSquareTable);
         this.forceStrengthTable[i] = 1 / (this.distSquareTable[i] * this.distTable[i]);
     }
-    //To be replaced with:
-    //Brutefrog.prototype.fasterSqrts(distSquareTable, distTable);
 
 
-    for (jScalar = 0; jScalar < this.numRowElements; jScalar += 1) {
-        for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numRowElements) {
+    for (jScalar = 0; jScalar < this.numColumns; jScalar += 1) {
+        for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
             this.forceStrengthTable[iScalar + jScalar] *= this.m[jScalar];
         }
     }
 
-    for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numRowElements) {
-        this.distSquareTable[iScalar] = 0;
+    for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
+        this.forceStrengthTable[iScalar] = 0;
         iScalar += 1; //To follow the diagonal elements.
     }
 
 
-    for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numRowElements) {
+    for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
         iVector = 3 * iScalar;
-        for (jScalar = 0; jScalar < this.numRowElements; jScalar += 1) {
+        for (jScalar = 0; jScalar < this.numColumns; jScalar += 1) {
             jVector = 3 * jVector;
             this.forceTable[iVector + jVector + 0] *= this.distSquareTable[iScalar + jScalar];
             this.forceTable[iVector + jVector + 1] *= this.distSquareTable[iScalar + jScalar];
@@ -132,96 +198,24 @@ BruteFrog.prototype.batchCalcForces = function () {
 
     this.a.fill(0);
     for (i = 0; i < this.maxNumParticles; i += 1) {
-        iVector = 3 * i * this.numRowElements;
-        for (jVector = 0; jVector < 3 * this.numRowElements; jVector += 3) {
+        iVector = 3 * i * this.numColumns;
+        for (jVector = 0; jVector < 3 * this.numColumns; jVector += 3) {
             this.a[3 * i + 0] += this.forceTable[iVector + jVector + 0];
             this.a[3 * i + 1] += this.forceTable[iVector + jVector + 1];
             this.a[3 * i + 2] += this.forceTable[iVector + jVector + 2];
         }
     }
 
-};
 
-
-
-BruteFrog.prototype.fasterSqrts = function (xSq, x) {
-    "use strict";
-
-    var xSqInt32 = new Int32Array(xSq.buffer, 0);
-    var xInt32 = new Int32Array(x.buffer, 0);
-
-    var i;
-    var numElements;
-
-    //First order approx | NaN in higher 32bits
-    numElements = xInt32.length;
-    for (i = 1; i < numElements; i += 2) {
-        xInt32[i + 0] = (xSqInt32[i + 0] >> 1) + 0x1ff80000;
-        xInt32[i + 0] |= xSqInt32[i + 0] >> 31;
-    }
-
-
-    //2nd order correction in lower 32-bit slot
-    numElements = xInt32.length;
-    for (i = 0; i < numElements; i += 2) {
-        xInt32[i] = (xInt32[i + 1] << 12);
-        xInt32[i] >>= 16;
-        xInt32[i] *= ~xInt32[i];
-        xInt32[i] >>= 16;
-        xInt32[i] *= 22488;
-        xInt32[i] >>= 12;
-        xInt32[i] += xInt32[i + 1];
-    }
-
-
-
-    // numElements = xSq.length;
 
 };
 
-BruteFrog.prototype.simpleSqrts = function (xSq, x) {
-    "use strict";
-    //Assume 64 bits,
-    var xSqInt32 = new Int32Array(xSq.buffer, 0);
-    var xInt32 = new Int32Array(x.buffer, 0);
-    var i;
-    var numElements;
-
-
-    numElements = 2 * xSq.length;
-
-    // for (i = 1; i < numElements; i += 2) {
-    //     xInt32[i + 0] = (xSqInt32[i + 0] >> 1) + 0x1ff80000;
-    // }
-    for (i = 1; i < numElements; i += 16) {
-        xInt32[i + 0] = (xSqInt32[i + 0] >> 1) + 0x1ff80000;
-        xInt32[i + 2] = (xSqInt32[i + 2] >> 1) + 0x1ff80000;
-        xInt32[i + 4] = (xSqInt32[i + 4] >> 1) + 0x1ff80000;
-        xInt32[i + 6] = (xSqInt32[i + 6] >> 1) + 0x1ff80000;
-        xInt32[i + 8] = (xSqInt32[i + 8] >> 1) + 0x1ff80000;
-        xInt32[i + 10] = (xSqInt32[i + 10] >> 1) + 0x1ff80000;
-        xInt32[i + 12] = (xSqInt32[i + 12] >> 1) + 0x1ff80000;
-        xInt32[i + 14] = (xSqInt32[i + 14] >> 1) + 0x1ff80000;
-    }
-
-    numElements = xSq.length;
-    for (i = 0; i < numElements; i += 1) {
-        x[i] += xSq[i] / x[i];
-        x[i] /= 2;
-        x[i] += xSq[i] / x[i];
-        x[i] /= 2;
-    //
-    }
-};
-
-
-
-BruteFrog.prototype.wrapperSqrts = function (xSq, x) {
+BruteFrog.prototype.sqrts = function (xSq, x) {
     "use strict";
     var i, numElements;
     var BLOCK_SIZE = 4;
 
-    //If not given a place to put result, do in-place:
+    //If not given a place to put result, perform in-place:
     x = x || xSq;
 
     numElements = BLOCK_SIZE * Math.floor(xSq.length / BLOCK_SIZE);
