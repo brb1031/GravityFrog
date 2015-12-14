@@ -35,7 +35,7 @@ var squareRootTests = function (numRandomSamples) {
         var numOps = input.length;
         name = name || testFunc.name;
         stopWatch = new Date();
-        testOutput = testOutput || new Float64Array(numOps);
+        // testOutput = testOutput || new Float64Array(numOps);
         testFunc(input, testOutput);
         return {name: name, testTime: new Date() - stopWatch, numOps: numOps};
     }
@@ -86,6 +86,9 @@ var squareRootTests = function (numRandomSamples) {
     logs.push(checkIt(BruteFrog.prototype.wrapperSqrts, specialCases, "wrapperSqrts (special cases)"));
     logs.push(checkIt(BruteFrog.prototype.wrapperSqrts, randoms, "wrapperSqrts (random nonnegative)"));
     timings.push(clockIt(BruteFrog.prototype.wrapperSqrts, randoms, "wrapperSqrts (random nonnegative)"));
+    var testOutput = new Float64Array(randoms.length);
+    timings.push(clockIt(BruteFrog.prototype.wrapperSqrts, randoms, "wrapperSqrts Pre-alloc (random nonnegative)", testOutput));
+    timings.push(clockIt(BruteFrog.prototype.wrapperSqrts, randoms, "wrapperSqrts In Place (random nonnegative)"));
 
 
     // stopWatch = new Date();
@@ -134,7 +137,7 @@ var squareRootTests = function (numRandomSamples) {
 };
 
 
-// var lineEnd = "<br>";
+var lineEnd = "<br>";
 
 var testResults;
 var i;
@@ -159,20 +162,22 @@ for (i = 0; i < testResults.timings.length; i += 1) {
     console.log("Speed (MegaOps/s): " + Math.floor(speedMops));
 }
 
+var summary = "Test for correctness:" + lineEnd;
 for (i = 0; i < testResults.logs.length; i += 1) {
     log = testResults.logs[i];
 
     if (log.success) {
-        console.log("PASS: " + log.name);
+        summary += "PASS: " + log.name + lineEnd;
     } else {
-        console.log("FAIL: " + log.name);
+        summary += "FAIL: " + log.name + lineEnd;
     }
 
     for (entry = 0; entry < log.log.length; entry += 1) {
         console.log(log.log[entry]);
     }
 }
-
+summary += "(Detailed results in javascript console.)" + lineEnd;
+document.write(summary);
 
 // if (testResults.numFailed) {
 //     logMessage = "FAIL: Brutefrog.simpleSqrts() gave incorrect results." + lineEnd;

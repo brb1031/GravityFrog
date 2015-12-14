@@ -220,6 +220,9 @@ BruteFrog.prototype.wrapperSqrts = function (xSq, x) {
     var i, numElements;
     var BLOCK_SIZE = 4;
 
+    //If not given a place to put result, do in-place:
+    x = x || xSq;
+
     numElements = BLOCK_SIZE * Math.floor(xSq.length / BLOCK_SIZE);
     for (i = 0; i < numElements; i += BLOCK_SIZE) {
         x[i + 0] = Math.sqrt(xSq[i + 0]);
@@ -236,3 +239,4 @@ BruteFrog.prototype.wrapperSqrts = function (xSq, x) {
         x[i] = Math.sqrt(xSq[i]);
     }
 };
+
