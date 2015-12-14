@@ -61,6 +61,7 @@ And Particle will therefore see this transparently.
             frog.initializeWorkspace();
             frog.allTables.set(this.allTables);
         }
+        return frog;
     };
 
 
@@ -141,8 +142,7 @@ BruteFrog.prototype.setGravityForce = function () {
     var iScalar, iVector;
     var jScalar, jVector;
 
-    //Set positions. (Bytes)
-    for (row = 0; row < 3 * this.tableSize; row += 3 * this.rowSize) {
+    for (row = 0; row < 3 * this.numTableElements; row += 3 * this.numColumns) {
         this.forceTable.set(this.x, row);
     }
 
