@@ -25,12 +25,10 @@ var squareRootTests = function (numRandomSamples) {
         randoms[i] /= (1 - randoms[i]);
     }
 
-    //Padding:
-    var numPadding = (randoms.length + 1) % 8 - 1;
+    randoms = new Float64Array(randoms);
 
-    for (i = 0; i < numPadding; i += 1) {
-        randoms.push(0);
-    }
+
+
 
     function clockIt(testFunc, input, name, testOutput) {
         var stopWatch;
@@ -41,6 +39,8 @@ var squareRootTests = function (numRandomSamples) {
         testFunc(input, testOutput);
         return {name: name, testTime: new Date() - stopWatch, numOps: numOps};
     }
+
+    // function clockUntil(testFunc)
 
     function checkIt(testFunc, input, name, verbose) {
         var numPassed = 0;
@@ -68,7 +68,13 @@ var squareRootTests = function (numRandomSamples) {
             }
             if ((!closeEnough || verbose) && remainingLogEntries) {
                 remainingLogEntries -= 1;
-                entry = "Element " + i + ", sqrt(" + input[i].toPrecision(4) + "): ";
+                entry = "";
+                if (closeEnough) {
+                    entry += "PASS: ";
+                } else {
+                    entry += "FAIL: ";
+                }
+                entry += "sqrt(" + input[i].toPrecision(4) + "): ";
                 entry += "Expected: " + expectedOutput[i].toPrecision(4) + ", ";
                 entry += "Found: " + testOutput[i].toPrecision(4);
                 log.push(entry);
@@ -77,9 +83,9 @@ var squareRootTests = function (numRandomSamples) {
         return {name: name, success: (numPassed === numTrials), numTrials: numTrials, numPassed: numPassed, log: log};
     }
 
-
-    logs.push(checkIt(BruteFrog.prototype.wrapperSqrts, randoms, "Wrap"));
-    timings.push(clockIt(BruteFrog.prototype.wrapperSqrts, randoms, "Wrap"));
+    logs.push(checkIt(BruteFrog.prototype.wrapperSqrts, specialCases, "wrapperSqrts (special cases)"));
+    logs.push(checkIt(BruteFrog.prototype.wrapperSqrts, randoms, "wrapperSqrts (random nonnegative)"));
+    timings.push(clockIt(BruteFrog.prototype.wrapperSqrts, randoms, "wrapperSqrts (random nonnegative)"));
 
 
     // stopWatch = new Date();
@@ -128,36 +134,42 @@ var squareRootTests = function (numRandomSamples) {
 };
 
 
-var numRandomSamples = 1E6;
 // var lineEnd = "<br>";
 
-var testResults = squareRootTests(numRandomSamples);
+var testResults;
 var i;
 var log, timing;
 var entry;
 var MS_PER_SEC = 1000;
 var MEGA_OPS_PER_S = MS_PER_SEC / 1E6;
-var speedMops;
+var MEGA_OPS_PER_FRAME = MEGA_OPS_PER_S / 60;
+
+var speedMops, MopsPerFrame;
+
+
+testResults = squareRootTests(1E6);
+
 
 for (i = 0; i < testResults.timings.length; i += 1) {
     timing = testResults.timings[i];
-    console.log("Test name: " + timing.name);
-    // console.log("Time (ms): " + timing.testTime);
+    console.log("" + timing.numOps + " iterations of " + timing.name);
+    console.log("Time (ms): " + timing.testTime);
     speedMops = MEGA_OPS_PER_S * timing.numOps / timing.testTime;
-    console.log("Speed (MegaOps/s: " + Math.floor(speedMops));
+    MopsPerFrame = MEGA_OPS_PER_FRAME * timing.numOps / timing.testTime;
+    console.log("Speed (MegaOps/s): " + Math.floor(speedMops));
 }
 
 for (i = 0; i < testResults.logs.length; i += 1) {
     log = testResults.logs[i];
-    console.log("Test name: " + timing.name);
 
     if (log.success) {
-        console.log("Correctness: PASS");
+        console.log("PASS: " + log.name);
     } else {
-        console.log("Correctness: FAIL");
+        console.log("FAIL: " + log.name);
     }
-    for (entry = 0; entry < log.length; entry += 1) {
-        console.log(log[entry]);
+
+    for (entry = 0; entry < log.log.length; entry += 1) {
+        console.log(log.log[entry]);
     }
 }
 

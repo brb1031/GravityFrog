@@ -218,16 +218,21 @@ BruteFrog.prototype.simpleSqrts = function (xSq, x) {
 BruteFrog.prototype.wrapperSqrts = function (xSq, x) {
     "use strict";
     var i, numElements;
+    var BLOCK_SIZE = 4;
 
-    numElements = xSq.length;
-    for (i = 0; i < numElements; i += 8) {
+    numElements = BLOCK_SIZE * Math.floor(xSq.length / BLOCK_SIZE);
+    for (i = 0; i < numElements; i += BLOCK_SIZE) {
         x[i + 0] = Math.sqrt(xSq[i + 0]);
         x[i + 1] = Math.sqrt(xSq[i + 1]);
         x[i + 2] = Math.sqrt(xSq[i + 2]);
         x[i + 3] = Math.sqrt(xSq[i + 3]);
-        x[i + 4] = Math.sqrt(xSq[i + 4]);
-        x[i + 5] = Math.sqrt(xSq[i + 5]);
-        x[i + 6] = Math.sqrt(xSq[i + 6]);
-        x[i + 7] = Math.sqrt(xSq[i + 7]);
+        // x[i + 4] = Math.sqrt(xSq[i + 4]);
+        // x[i + 5] = Math.sqrt(xSq[i + 5]);
+        // x[i + 6] = Math.sqrt(xSq[i + 6]);
+        // x[i + 7] = Math.sqrt(xSq[i + 7]);
+    }
+
+    for (i = numElements; i < xSq.length; i += 1) {
+        x[i] = Math.sqrt(xSq[i]);
     }
 };
