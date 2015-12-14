@@ -81,7 +81,6 @@ And Particle will therefore see this transparently.
 
 }
 
-
 BruteFrog.prototype.snapshot = function () {
     // Copy only the current state of the particles.  Cannot be evolved.
     "use strict";
@@ -205,9 +204,6 @@ BruteFrog.prototype.setGravityForce = function () {
             this.a[3 * i + 2] += this.forceTable[iVector + jVector + 2];
         }
     }
-
-
-
 };
 
 BruteFrog.prototype.sqrts = function (xSq, x) {

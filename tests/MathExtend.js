@@ -1,3 +1,5 @@
+Math.TAU = Math.TAU || 2 * Math.PI;
+
 Math.relativeTol = 1E-5;
 Math.absoluteTol = 1E-8;
 
