@@ -14,29 +14,30 @@ And Particle will therefore see this transparently.
     this.allRows = new this.tView(this.b, 0);
 
     var rowOffset = 0;
+
     this.x = new this.tView(this.b, rowOffset * this.rowSize);
     rowOffset += 3;
+
     this.v = new this.tView(this.b, rowOffset * this.rowSize);
     rowOffset += 3;
+
     this.a = new this.tView(this.b, rowOffset * this.rowSize);
     rowOffset += 3;
+
     this.aOld = new this.tView(this.b, rowOffset * this.rowSize);
     rowOffset += 3;
+
     this.aSwap = this.a;
 
     this.m = new this.tView(this.b, rowOffset * this.rowSize);
     rowOffset += 1;
+
     this.numRows = rowOffset;
 
-    this.fStrengthBuf = new ArrayBuffer(this.tableSize);
-    this.fBuf = new ArrayBuffer(3 * this.tableSize);
-    this.dBuf = new ArrayBuffer(this.tableSize);
-    this.dSquaredBuf = new ArrayBuffer(this.tableSize);
-
-    this.forceStrengthTable = new this.tView(this.fStrengthBuf);
-    this.forceTable = new this.tView(this.fBuf);
-    this.distTable = new this.tView(this.dBuf);
-    this.distSquareTable = new this.tView(this.dSquaredBuf);
+    this.forceStrengthTable = new this.tView(this.tableSize);
+    this.forceTable = new this.tView(3 * this.tableSize);
+    this.distTable = new this.tView(this.tableSize);
+    this.distSquareTable = new this.tView(this.tableSize);
 }
 
 BruteFrog.prototype.Leap = function () {
