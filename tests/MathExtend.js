@@ -14,3 +14,11 @@ Math.isClose = function (a, b) {
     }
 };
 
+Math.randBroad = function () {
+/*    produces random real numbers, from zero (inclusive) to
+    2^52 (exclusive).*/
+    "use strict";
+    var x = Math.random();
+    x /= (1 - x);
+    return x;
+};
