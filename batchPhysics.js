@@ -144,88 +144,38 @@ BruteFrog.prototype.batchCalcForces = function () {
 
 
 BruteFrog.prototype.fasterSqrts = function (xSq, x) {
-    //Assume 64 bits,
-    //32 bits has lo = offset, hi = offset+1
-
-  // var xSqBitLo = new Uint32Array(x.buffer, 0);
- //  var xSqBitHi = new Uint32Array(x.buffer, 4);
-
-  // var inputByteLength = xSq.length*xSq.BYTES_PER_ELEMENT;
-
     "use strict";
-    var x32FloatLo = new Float32Array(x.buffer, 0);
-    var x32FloatHi = new Float32Array(x.buffer, 4);
 
-    var x32UnsignedLo = new Uint32Array(x.buffer, 0);
-    var x32UnsignedHi = new Uint32Array(x.buffer, 4);
-
-    var x32IntLo = new Int32Array(x.buffer, 0);
-    var x32IntHi = new Int32Array(x.buffer, 4);
-
-    var x16Byte0 = new Int16Array(x.buffer, 0);
-    var x16Byte2 = new Int16Array(x.buffer, 2);
+    var xSqInt32 = new Int32Array(xSq.buffer, 0);
+    var xInt32 = new Int32Array(x.buffer, 0);
 
     var i;
     var numElements;
-    //Interleaved approach, cast to 32bit float
 
-    numElements = xSq.length;
-    for (i = 0; i < numElements; i += 8) {
-        x32FloatLo[2 * i + 0] = xSq[i + 0];
-        x32FloatLo[2 * i + 2] = xSq[i + 1];
-        x32FloatLo[2 * i + 4] = xSq[i + 2];
-        x32FloatLo[2 * i + 6] = xSq[i + 3];
-        x32FloatLo[2 * i + 8] = xSq[i + 4];
-        x32FloatLo[2 * i + 10] = xSq[i + 5];
-        x32FloatLo[2 * i + 12] = xSq[i + 6];
-        x32FloatLo[2 * i + 14] = xSq[i + 7];
+    //First order approx | NaN in higher 32bits
+    numElements = xInt32.length;
+    for (i = 1; i < numElements; i += 2) {
+        xInt32[i + 0] = (xSqInt32[i + 0] >> 1) + 0x1ff80000;
+        xInt32[i + 0] |= xSqInt32[i + 0] >> 31;
     }
 
 
-    numElements = x32IntLo.length;
+    //2nd order correction in lower 32-bit slot
+    numElements = xInt32.length;
     for (i = 0; i < numElements; i += 2) {
-        x32IntLo[i] |= x32IntLo[i] >> 31;
-        // Input now either NaN, 0 <= x32IntLo[i], or +Infinity
-        if ((x32IntLo[i] & 0x7f800000) !== 0x7f800000) {
-            // Guess such that bias+exp/2 is in higher 16 bits
-            // (exp%2, Mantissa) in lower 16 bits
-            x32IntLo[i] += 0x3f800000;
-            x32IntLo[i] >>>= 8;
-            x32IntHi[i] = x32IntLo[i];
-
-            //2nd Order correction:
-            x32IntLo[i] = (x16Byte0[2 * i] * x16Byte0[2 * i]);
-            x32IntLo[i] = 22488 * x16Byte2[2 * i];
-            x32IntLo[i] = x16Byte2[2 * i];
-            // lo has 0, f(x-b)^2
-
-            x32UnsignedLo[i] = x32UnsignedHi[i] - x32UnsignedLo[i];
-            // lo has n, (b+x)/2-f(x-b)^2
-            // hi has n, (b+x)/2
-
-            x32FloatHi[i] = xSq[i / 2];
-            x32IntLo[i] <<= 7;
-
-            //Perform Newton's method on 32bit float.
-            x32FloatLo[i] += x32FloatHi[i] / x32FloatLo[i];
-            // x32FloatLo[i] /= 2;
-            x32UnsignedLo[i] -= 0x00800000;
-        }
+        xInt32[i] = (xInt32[i + 1] << 12);
+        xInt32[i] >>= 16;
+        xInt32[i] *= ~xInt32[i];
+        xInt32[i] >>= 16;
+        xInt32[i] *= 22488;
+        xInt32[i] >>= 12;
+        xInt32[i] += xInt32[i + 1];
     }
 
-    numElements = xSq.length;
-    for (i = 0; i < numElements; i += 8) {
-        //One 64-bit refinement:
-        // x[i] = (x32FloatHi[2 * i]+ xSq[i]/x32FloatHi[2 * i])/2;
-        x[i + 0] = x32FloatLo[2 * i + 0];
-        x[i + 1] = x32FloatLo[2 * i + 2];
-        x[i + 2] = x32FloatLo[2 * i + 4];
-        x[i + 3] = x32FloatLo[2 * i + 6];
-        x[i + 4] = x32FloatLo[2 * i + 8];
-        x[i + 5] = x32FloatLo[2 * i + 10];
-        x[i + 6] = x32FloatLo[2 * i + 12];
-        x[i + 7] = x32FloatLo[2 * i + 14];
-    }
+
+
+    // numElements = xSq.length;
+
 };
 
 BruteFrog.prototype.simpleSqrts = function (xSq, x) {
@@ -260,5 +210,29 @@ BruteFrog.prototype.simpleSqrts = function (xSq, x) {
         x[i] += xSq[i] / x[i];
         x[i] /= 2;
     //
+    }
+};
+
+
+
+BruteFrog.prototype.wrapperSqrts = function (xSq, x) {
+    "use strict";
+    var i, numElements;
+    var BLOCK_SIZE = 4;
+
+    numElements = BLOCK_SIZE * Math.floor(xSq.length / BLOCK_SIZE);
+    for (i = 0; i < numElements; i += BLOCK_SIZE) {
+        x[i + 0] = Math.sqrt(xSq[i + 0]);
+        x[i + 1] = Math.sqrt(xSq[i + 1]);
+        x[i + 2] = Math.sqrt(xSq[i + 2]);
+        x[i + 3] = Math.sqrt(xSq[i + 3]);
+        // x[i + 4] = Math.sqrt(xSq[i + 4]);
+        // x[i + 5] = Math.sqrt(xSq[i + 5]);
+        // x[i + 6] = Math.sqrt(xSq[i + 6]);
+        // x[i + 7] = Math.sqrt(xSq[i + 7]);
+    }
+
+    for (i = numElements; i < xSq.length; i += 1) {
+        x[i] = Math.sqrt(xSq[i]);
     }
 };
