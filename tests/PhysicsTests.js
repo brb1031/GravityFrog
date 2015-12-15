@@ -37,12 +37,11 @@ var physicsTests = function () {
             elapsedTime: elapsedTime};
 };
 
+var lineEnd = "<br>";
+
 var testResults = physicsTests();
 
-console.log("Elapsed time (ms): " + testResults.elapsedTime);
-
-var summary = "";
-var lineEnd = "<br>";
+var summary = "Elapsed time (ms): " + testResults.elapsedTime + lineEnd;
 
 summary += "(Detailed results in javascript console.)" + lineEnd;
 document.write(summary);
