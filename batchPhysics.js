@@ -150,18 +150,39 @@ BruteFrog.prototype.setGravityForce = function () {
     setx(this);
     //Subtract self position to form vector pointing from self to every other:
 
-    var setdx = function (f) {
-        for (iVector = 0; iVector < 3 * f.numTableElements; iVector += 3 * f.numColumns) {
-            for (jVector = 0; jVector < 3 * f.numColumns; jVector += 3) {
-                f.forceTable[iVector + jVector + 0] -= f.x[iVector + 0];
-                f.forceTable[iVector + jVector + 1] -= f.x[iVector + 1];
-                f.forceTable[iVector + jVector + 2] -= f.x[iVector + 2];
+
+    var setdxOptimized = function (f) {
+        var j = -1;
+        var x, y, z;
+        var numElements;
+        numElements = 3 * f.numTableElements;
+        for (i = 0; i < numElements; i += 3) {
+            if (!(0)) {
+                j += 1;
+                x = f.x[j + 0];
+                y = f.x[j + 1];
+                z = f.x[j + 2];
             }
+            f.forceTable[i + 0] -= x;
+            f.forceTable[i + 1] -= y;
+            f.forceTable[i + 2] -= z;
         }
     };
-    setdx(this);
-    //Calculate d^2
+    setdxOptimized(this);
 
+    // var setdx = function (f) {
+    //     for (iVector = 0; iVector < 3 * f.numTableElements; iVector += 3 * f.numColumns) {
+    //         for (jVector = 0; jVector < 3 * f.numColumns; jVector += 3) {
+    //             f.forceTable[iVector + jVector + 0] -= f.x[iVector + 0];
+    //             f.forceTable[iVector + jVector + 1] -= f.x[iVector + 1];
+    //             f.forceTable[iVector + jVector + 2] -= f.x[iVector + 2];
+    //         }
+    //     }
+    // };
+    // setdx(this);
+
+
+    //Calculate d^2
     var setdSquaredOptimized = function (f) {
         for (i = 0; i < f.numTableElements; i += 1) {
             f.distSquareTable[i] = f.forceTable[3 * i + 0] * f.forceTable[3 * i + 0];
@@ -177,12 +198,12 @@ BruteFrog.prototype.setGravityForce = function () {
 
 
 
-    var inverseCube = function (f) {
+    var calculateInverseCube = function (f) {
         for (i = 0; i < f.numTableElements; i += 1) {
             f.forceStrengthTable[i] = 1 / (f.distSquareTable[i] * f.distTable[i]);
         }
     };
-    inverseCube(this);
+    calculateInverseCube(this);
 
     var scaleM = function (f) {
         for (jScalar = 0; jScalar < f.numColumns; jScalar += 1) {
@@ -198,28 +219,28 @@ BruteFrog.prototype.setGravityForce = function () {
         iScalar += 1; //To follow the diagonal elements.
     }
 
-    var scaleByInverseCube = function (f) {
-        for (iScalar = 0; iScalar < f.numTableElements; iScalar += f.numColumns) {
-            iVector = 3 * iScalar;
-            for (jScalar = 0; jScalar < f.numColumns; jScalar += 1) {
-                jVector = 3 * jVector;
-                f.forceTable[iVector + jVector + 0] *= f.distSquareTable[iScalar + jScalar];
-                f.forceTable[iVector + jVector + 1] *= f.distSquareTable[iScalar + jScalar];
-                f.forceTable[iVector + jVector + 2] *= f.distSquareTable[iScalar + jScalar];
+    var scaleByInverseCubeOptimized = function (f) {
+        for (i = 0; i < f.numTableElements; i += 1) {
+            f.forceTable[3 * i + 0] *= f.distSquareTable[i];
+            f.forceTable[3 * i + 1] *= f.distSquareTable[i];
+            f.forceTable[3 * i + 2] *= f.distSquareTable[i];
+        }
+    };
+    scaleByInverseCubeOptimized(this);
+
+
+    this.a.fill(0);
+    var sumAccels = function (f) {
+        for (i = 0; i < f.maxNumParticles; i += 1) {
+            iVector = 3 * i * f.numColumns;
+            for (jVector = 0; jVector < 3 * f.numColumns; jVector += 3) {
+                f.a[3 * i + 0] += f.forceTable[iVector + jVector + 0];
+                f.a[3 * i + 1] += f.forceTable[iVector + jVector + 1];
+                f.a[3 * i + 2] += f.forceTable[iVector + jVector + 2];
             }
         }
     };
-    scaleByInverseCube(this);
-
-    this.a.fill(0);
-    for (i = 0; i < this.maxNumParticles; i += 1) {
-        iVector = 3 * i * this.numColumns;
-        for (jVector = 0; jVector < 3 * this.numColumns; jVector += 3) {
-            this.a[3 * i + 0] += this.forceTable[iVector + jVector + 0];
-            this.a[3 * i + 1] += this.forceTable[iVector + jVector + 1];
-            this.a[3 * i + 2] += this.forceTable[iVector + jVector + 2];
-        }
-    }
+    sumAccels(this);
 };
 
 BruteFrog.prototype.sqrts = function (xSq, x) {
