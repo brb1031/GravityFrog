@@ -40,14 +40,19 @@ And Particle will therefore see this transparently.
         this.forceTable = allocateTViewSpace(this.workBuffer,
                 3 * this.numTableElements);
 
+        this.tmpSelfPosition = new this.tView(this.workBuffer,
+                this.workBuffer.nextByte,
+                3 * this.numTableElements);
+
+        this.distSquareTable = allocateTViewSpace(this.workBuffer,
+                1 * this.numTableElements);
+
         this.forceStrengthTable = allocateTViewSpace(this.workBuffer,
                 1 * this.numTableElements);
 
         this.distTable = allocateTViewSpace(this.workBuffer,
                 1 * this.numTableElements);
 
-        this.distSquareTable = allocateTViewSpace(this.workBuffer,
-                1 * this.numTableElements);
     };
 
     this.copy = function (includeWorkspace) {
@@ -61,6 +66,7 @@ And Particle will therefore see this transparently.
             frog.initializeWorkspace();
             frog.allTables.set(this.allTables);
         }
+        return frog;
     };
 
 
@@ -141,69 +147,189 @@ BruteFrog.prototype.setGravityForce = function () {
     var iScalar, iVector;
     var jScalar, jVector;
 
-    //Set positions. (Bytes)
-    for (row = 0; row < 3 * this.tableSize; row += 3 * this.rowSize) {
-        this.forceTable.set(this.x, row);
-    }
-
-    //Subtract self position to form vector pointing from self to every other:
-    for (iVector = 0; iVector < 3 * this.numTableElements; iVector += 3 * this.numColumns) {
-        for (jVector = 0; jVector < 3 * this.numColumns; jVector += 3) {
-            this.forceTable[iVector + jVector + 0] -= this.x[iVector + 0];
-            this.forceTable[iVector + jVector + 1] -= this.x[iVector + 1];
-            this.forceTable[iVector + jVector + 2] -= this.x[iVector + 2];
+    var setx = function (f) {
+        for (row = 0; row < 3 * f.numTableElements; row += 3 * f.numColumns) {
+            f.forceTable.set(f.x, row);
         }
-    }
+    };
+    setx(this);
+
+    var setSelfx = function (f) {
+        var numElements, numVColumns;
+        var selfI;
+        numElements = 3 * f.numTableElements;
+        numVColumns = 3 * f.numColumns;
+
+        for (i = 0; i < numElements; i += 3) {
+            selfI = (i / numVColumns) >>> 0;
+            f.tmpSelfPosition[i + 0] = f.x[selfI + 0];
+            f.tmpSelfPosition[i + 1] = f.x[selfI + 1];
+            f.tmpSelfPosition[i + 2] = f.x[selfI + 2];
+        }
+    };
+    setSelfx(this);
+
+    var setdxSubtract = function (f) {
+        var BLOCK_SIZE = 8;
+        var numElements = 3 * f.numTableElements;
+
+        var iChunked = BLOCK_SIZE * Math.floor(numElements / BLOCK_SIZE);
+
+        for (i = 0; i < iChunked; i += BLOCK_SIZE) {
+            f.forceTable[i + 0] -= f.tmpSelfPosition[i + 0];
+            f.forceTable[i + 1] -= f.tmpSelfPosition[i + 1];
+            f.forceTable[i + 2] -= f.tmpSelfPosition[i + 2];
+            f.forceTable[i + 3] -= f.tmpSelfPosition[i + 3];
+            f.forceTable[i + 4] -= f.tmpSelfPosition[i + 4];
+            f.forceTable[i + 5] -= f.tmpSelfPosition[i + 5];
+            f.forceTable[i + 6] -= f.tmpSelfPosition[i + 6];
+            f.forceTable[i + 7] -= f.tmpSelfPosition[i + 7];
+        }
+
+        for (i = iChunked; i < numElements; i += 1) {
+            f.forceTable[i + 0] -= f.tmpSelfPosition[i + 0];
+        }
+    };
+    setdxSubtract(this);
+
+
+    var setGravityToAwesome = function (f) {
+        var rSq;
+        var numElements = 3 * f.numTableElements;
+
+        for (i = 0; i < numElements; i += 3) {
+            rSq = 1 / (f.forceTable[i + 0] * f.forceTable[i + 0] +
+                    f.forceTable[i + 1] * f.forceTable[i + 1] +
+                    f.forceTable[i + 2] * f.forceTable[i + 2]);
+            rSq *= Math.sqrt(rSq);
+            f.forceTable[i + 0] *= rSq;
+            f.forceTable[i + 1] *= rSq;
+            f.forceTable[i + 2] *= rSq;
+        }
+    };
+    setGravityToAwesome(this);
+
+
+
+
+
+
+
 
     //Calculate d^2
-    for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
-        iVector = 3 * iScalar;
-        for (jScalar = 0; jScalar < this.numTableElements; jScalar += 1) {
-            jVector = 3 * jScalar;
-            this.distSquareTable[iScalar + jScalar] = this.forceTable[iVector + jVector + 0] * this.forceTable[iVector + jVector + 0] +
-                    this.forceTable[iVector + jVector + 1] * this.forceTable[iVector + jVector + 1] +
-                    this.forceTable[iVector + jVector + 2] * this.forceTable[iVector + jVector + 2];
+    var setdSquared = function (f) {
+        var numElements;
+        var iChunked;
+        var BLOCK_SIZE = 2;
+        numElements = f.numTableElements;
+        iChunked = BLOCK_SIZE * Math.floor(numElements / BLOCK_SIZE);
+
+
+        // for (i = 0; i < iChunked; i += BLOCK_SIZE) {
+        //     f.distSquareTable[i] = f.forceTable[3 * i + 0] * f.forceTable[3 * i + 0];
+        //     f.distSquareTable[i] += f.forceTable[3 * i + 1] * f.forceTable[3 * i + 1];
+        //     f.distSquareTable[i] += f.forceTable[3 * i + 2] * f.forceTable[3 * i + 2];
+        //     f.distSquareTable[i + 1] = f.forceTable[3 * i + 3] * f.forceTable[3 * i + 3];
+        //     f.distSquareTable[i + 1] += f.forceTable[3 * i + 4] * f.forceTable[3 * i + 4];
+        //     f.distSquareTable[i + 1] += f.forceTable[3 * i + 5] * f.forceTable[3 * i + 5];
+        // }
+        iChunked = 0;
+        var iV = 0;
+        for (i = iChunked; i < numElements; i += 1) {
+            f.distSquareTable[i] = f.forceTable[iV + 0] * f.forceTable[iV + 0];
+            f.distSquareTable[i] += f.forceTable[iV + 1] * f.forceTable[iV + 1];
+            f.distSquareTable[i] += f.forceTable[iV + 2] * f.forceTable[iV + 2];
+            iV += 3;
         }
-    }
 
-    BruteFrog.prototype.sqrts(this.distSquareTable, this.distTable);
-
-    for (i = 0; i < this.numTableElements; i += 1) {
-        this.forceStrengthTable[i] = 1 / (this.distSquareTable[i] * this.distTable[i]);
-    }
+    };
+    // setdSquared(this);
 
 
-    for (jScalar = 0; jScalar < this.numColumns; jScalar += 1) {
-        for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
-            this.forceStrengthTable[iScalar + jScalar] *= this.m[jScalar];
+    var calcSquaredOptimized = function (f) {
+        var BLOCK_SIZE = 8;
+        var numElements = 3 * f.numTableElements;
+
+        f.tmpSelfPosition.set(f.forceTable);
+
+        var iChunked = BLOCK_SIZE * Math.floor(numElements / BLOCK_SIZE);
+        for (i = 0; i < iChunked; i += BLOCK_SIZE) {
+            f.tmpSelfPosition[i + 0] *= f.tmpSelfPosition[i + 0];
+            f.tmpSelfPosition[i + 1] *= f.tmpSelfPosition[i + 1];
+            f.tmpSelfPosition[i + 2] *= f.tmpSelfPosition[i + 2];
+            f.tmpSelfPosition[i + 3] *= f.tmpSelfPosition[i + 3];
+            f.tmpSelfPosition[i + 4] *= f.tmpSelfPosition[i + 4];
+            f.tmpSelfPosition[i + 5] *= f.tmpSelfPosition[i + 5];
+            f.tmpSelfPosition[i + 6] *= f.tmpSelfPosition[i + 6];
+            f.tmpSelfPosition[i + 7] *= f.tmpSelfPosition[i + 7];
         }
-    }
+
+        for (i = iChunked; i < numElements; i += 1) {
+            f.tmpSelfPosition[i + 0] *= f.tmpSelfPosition[i + 0];
+        }
+
+    };
+    // calcSquaredOptimized(this);
+
+    var sumSquaredOptimized = function (f) {
+        var iV = 0;
+        var numElements = f.numTableElements;
+        for (i = 0; i < numElements; i += 1) {
+            f.distSquareTable[i + 0] = f.tmpSelfPosition[iV + 0];
+            f.distSquareTable[i + 0] += f.tmpSelfPosition[iV + 1];
+            f.distSquareTable[i + 0] += f.tmpSelfPosition[iV + 2];
+            iV += 3;
+        }
+    };
+    // sumSquaredOptimized(this);
+
+    // BruteFrog.prototype.sqrts(this.distSquareTable, this.distTable);
+
+
+
+    var scaleInverseCube = function (f) {
+        for (i = 0; i < f.numTableElements; i += 1) {
+            f.forceStrengthTable[i] = 1 / (f.distSquareTable[i] * f.distTable[i]);
+        }
+    };
+    // scaleInverseCube(this);
+
+    var scaleM = function (f) {
+        for (jScalar = 0; jScalar < f.numColumns; jScalar += 1) {
+            for (iScalar = 0; iScalar < f.numTableElements; iScalar += f.numColumns) {
+                f.forceStrengthTable[iScalar + jScalar] *= f.m[jScalar];
+            }
+        }
+    };
+    scaleM(this);
 
     for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
         this.forceStrengthTable[iScalar] = 0;
         iScalar += 1; //To follow the diagonal elements.
     }
 
+    // var scaleByInverseCubeOptimized = function (f) {
+    //     for (i = 0; i < f.numTableElements; i += 1) {
+    //         f.forceTable[3 * i + 0] *= f.distSquareTable[i];
+    //         f.forceTable[3 * i + 1] *= f.distSquareTable[i];
+    //         f.forceTable[3 * i + 2] *= f.distSquareTable[i];
+    //     }
+    // };
+    // scaleByInverseCubeOptimized(this);
 
-    for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
-        iVector = 3 * iScalar;
-        for (jScalar = 0; jScalar < this.numColumns; jScalar += 1) {
-            jVector = 3 * jVector;
-            this.forceTable[iVector + jVector + 0] *= this.distSquareTable[iScalar + jScalar];
-            this.forceTable[iVector + jVector + 1] *= this.distSquareTable[iScalar + jScalar];
-            this.forceTable[iVector + jVector + 2] *= this.distSquareTable[iScalar + jScalar];
-        }
-    }
 
     this.a.fill(0);
-    for (i = 0; i < this.maxNumParticles; i += 1) {
-        iVector = 3 * i * this.numColumns;
-        for (jVector = 0; jVector < 3 * this.numColumns; jVector += 3) {
-            this.a[3 * i + 0] += this.forceTable[iVector + jVector + 0];
-            this.a[3 * i + 1] += this.forceTable[iVector + jVector + 1];
-            this.a[3 * i + 2] += this.forceTable[iVector + jVector + 2];
+    var sumAccels = function (f) {
+        for (i = 0; i < f.maxNumParticles; i += 1) {
+            iVector = 3 * i * f.numColumns;
+            for (jVector = 0; jVector < 3 * f.numColumns; jVector += 3) {
+                f.a[3 * i + 0] += f.forceTable[iVector + jVector + 0];
+                f.a[3 * i + 1] += f.forceTable[iVector + jVector + 1];
+                f.a[3 * i + 2] += f.forceTable[iVector + jVector + 2];
+            }
         }
-    }
+    };
+    sumAccels(this);
 };
 
 BruteFrog.prototype.sqrts = function (xSq, x) {
