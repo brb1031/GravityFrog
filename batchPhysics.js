@@ -142,58 +142,74 @@ BruteFrog.prototype.setGravityForce = function () {
     var iScalar, iVector;
     var jScalar, jVector;
 
-    for (row = 0; row < 3 * this.numTableElements; row += 3 * this.numColumns) {
-        this.forceTable.set(this.x, row);
-    }
-
+    var setx = function (f) {
+        for (row = 0; row < 3 * f.numTableElements; row += 3 * f.numColumns) {
+            f.forceTable.set(f.x, row);
+        }
+    };
+    setx(this);
     //Subtract self position to form vector pointing from self to every other:
-    for (iVector = 0; iVector < 3 * this.numTableElements; iVector += 3 * this.numColumns) {
-        for (jVector = 0; jVector < 3 * this.numColumns; jVector += 3) {
-            this.forceTable[iVector + jVector + 0] -= this.x[iVector + 0];
-            this.forceTable[iVector + jVector + 1] -= this.x[iVector + 1];
-            this.forceTable[iVector + jVector + 2] -= this.x[iVector + 2];
-        }
-    }
 
-    //Calculate d^2
-    for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
-        iVector = 3 * iScalar;
-        for (jScalar = 0; jScalar < this.numTableElements; jScalar += 1) {
-            jVector = 3 * jScalar;
-            this.distSquareTable[iScalar + jScalar] = this.forceTable[iVector + jVector + 0] * this.forceTable[iVector + jVector + 0] +
-                    this.forceTable[iVector + jVector + 1] * this.forceTable[iVector + jVector + 1] +
-                    this.forceTable[iVector + jVector + 2] * this.forceTable[iVector + jVector + 2];
+    var setdx = function (f) {
+        for (iVector = 0; iVector < 3 * f.numTableElements; iVector += 3 * f.numColumns) {
+            for (jVector = 0; jVector < 3 * f.numColumns; jVector += 3) {
+                f.forceTable[iVector + jVector + 0] -= f.x[iVector + 0];
+                f.forceTable[iVector + jVector + 1] -= f.x[iVector + 1];
+                f.forceTable[iVector + jVector + 2] -= f.x[iVector + 2];
+            }
         }
-    }
+    };
+    setdx(this);
+    //Calculate d^2
+
+    var setdSquaredOptimized = function (f) {
+        for (i = 0; i < f.numTableElements; i += 1) {
+            f.distSquareTable[i] = f.forceTable[3 * i + 0] * f.forceTable[3 * i + 0];
+            f.distSquareTable[i] += f.forceTable[3 * i + 1] * f.forceTable[3 * i + 1];
+            f.distSquareTable[i] += f.forceTable[3 * i + 2] * f.forceTable[3 * i + 2];
+        }
+    };
+
+    setdSquaredOptimized(this);
+
 
     BruteFrog.prototype.sqrts(this.distSquareTable, this.distTable);
 
-    for (i = 0; i < this.numTableElements; i += 1) {
-        this.forceStrengthTable[i] = 1 / (this.distSquareTable[i] * this.distTable[i]);
-    }
 
 
-    for (jScalar = 0; jScalar < this.numColumns; jScalar += 1) {
-        for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
-            this.forceStrengthTable[iScalar + jScalar] *= this.m[jScalar];
+    var inverseCube = function (f) {
+        for (i = 0; i < f.numTableElements; i += 1) {
+            f.forceStrengthTable[i] = 1 / (f.distSquareTable[i] * f.distTable[i]);
         }
-    }
+    };
+    inverseCube(this);
+
+    var scaleM = function (f) {
+        for (jScalar = 0; jScalar < f.numColumns; jScalar += 1) {
+            for (iScalar = 0; iScalar < f.numTableElements; iScalar += f.numColumns) {
+                f.forceStrengthTable[iScalar + jScalar] *= f.m[jScalar];
+            }
+        }
+    };
+    scaleM(this);
 
     for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
         this.forceStrengthTable[iScalar] = 0;
         iScalar += 1; //To follow the diagonal elements.
     }
 
-
-    for (iScalar = 0; iScalar < this.numTableElements; iScalar += this.numColumns) {
-        iVector = 3 * iScalar;
-        for (jScalar = 0; jScalar < this.numColumns; jScalar += 1) {
-            jVector = 3 * jVector;
-            this.forceTable[iVector + jVector + 0] *= this.distSquareTable[iScalar + jScalar];
-            this.forceTable[iVector + jVector + 1] *= this.distSquareTable[iScalar + jScalar];
-            this.forceTable[iVector + jVector + 2] *= this.distSquareTable[iScalar + jScalar];
+    var scaleByInverseCube = function (f) {
+        for (iScalar = 0; iScalar < f.numTableElements; iScalar += f.numColumns) {
+            iVector = 3 * iScalar;
+            for (jScalar = 0; jScalar < f.numColumns; jScalar += 1) {
+                jVector = 3 * jVector;
+                f.forceTable[iVector + jVector + 0] *= f.distSquareTable[iScalar + jScalar];
+                f.forceTable[iVector + jVector + 1] *= f.distSquareTable[iScalar + jScalar];
+                f.forceTable[iVector + jVector + 2] *= f.distSquareTable[iScalar + jScalar];
+            }
         }
-    }
+    };
+    scaleByInverseCube(this);
 
     this.a.fill(0);
     for (i = 0; i < this.maxNumParticles; i += 1) {
