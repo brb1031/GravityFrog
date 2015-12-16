@@ -17,7 +17,7 @@ var physicsTests = function () {
     bFrog = new BruteFrog(1);
     passed = passed && bFrog;
 
-    bFrog = new BruteFrog(125);
+    bFrog = new BruteFrog(128);
     for (i = 0; i < bFrog.allRows.length; i += 1) {
         bFrog.allRows[i] = Math.randBroad();
     }
