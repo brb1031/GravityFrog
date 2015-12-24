@@ -1,3 +1,152 @@
+/*global
+    console
+*/
+
+var tView = Float64Array;
+var Vectord32 = Int32Array;
+
+tView.prototype.fromVectord32 = function (sourceVector) {
+    "use strict";
+    var i;
+    var bias64 = 0x3ff;
+    var scale = new Float64Array(1);
+    var scaleInt32 = new Int32Array(scale.buffer);
+
+    //Assume that the calling object exists, and wants to overwrite
+    //Its contents with sourceVector's
+
+    scaleInt32[1] = this[this.length - 1];
+    scaleInt32[1] += bias64;
+    scaleInt32[1] <<= 20;
+
+    for (i = 0; i < this.length; i += 1) {
+        this[i] = scale[0] * sourceVector[i];
+    }//This gets the result back as a float64 without
+    // having to calculate leading zeros to reconstruct
+    // the float.
+};
+
+tView.prototype.fromVectord32Faster = function (sourceVector) {
+    "use strict";
+    var i;
+    var bias64 = 0x3ff;
+    var exp, sgn;
+    var arrayInt32 = new Int32Array(this.buffer);
+    var sourceUint32 = new Uint32Array(sourceVector.buffer);
+    var leadingZeros;
+    //Assume that the calling object exists, and wants to overwrite
+    //Its contents with sourceVector's
+
+    exp = sourceVector[sourceVector.length - 1];
+    exp += bias64;
+    exp <<= 20;
+
+    arrayInt32.fill(exp);
+
+    for (i = 0; i < this.length; i += 1) {
+        sgn = sourceVector[i] >> 31;
+        sourceVector[i] ^= sgn;
+
+        leadingZeros = Math.clz32(sourceUint32[i]);
+        arrayInt32[2 * i + 1] -= ((leadingZeros + 1) << 20);
+        sourceUint32[i] <<= (leadingZeros + 1);
+
+        arrayInt32[2 * i + 1] |= (sourceVector[i] >> 12);
+        arrayInt32[2 * i + 0] = (sourceVector[i] << 20);
+
+        if (sgn) {
+            arrayInt32[2 * i + 1] |= (1 << 31);
+        }
+    }
+};
+
+Vectord32.prototype.fromFloat64Array = function (sourceArray) {
+//Maybe don't pre-shift for later subtraction, so that
+    "use strict";
+    var i, sgn, frac;
+    var hi, lo;
+    var bias64 = 0x3ff;
+    var maxExp = -(28 + bias64);
+    var sourceInt32 = new Int32Array(sourceArray.buffer);
+    var sharedExp = new Vectord32(sourceArray.length + 1);
+
+    for (i = 0; i < sourceArray.length; i += 1) {
+        sharedExp[i] = (sourceInt32[i] & 0x7ff00000) >>> 20;
+        sharedExp[i] -= (28 + bias64);
+        if (sharedExp[i] > maxExp) {
+            maxExp = sharedExp[i];
+        }
+    }
+
+    sharedExp[sharedExp.length - 1] = maxExp;
+
+    for (i = 0; i < sourceArray.length; i += 1) {
+        hi = sourceInt32[2 * i + 1];
+        lo = sourceInt32[2 * i + 0];
+
+        frac = (hi << 12) | (lo >>> 20); //32 msb of mantissa
+        sgn = hi >> 31;
+        frac >>>= 4; //Only store 28 bits, make room for sgn, and un-implied one
+        frac |= (1 << 28);
+        frac ^= sgn; //Sign of float
+
+        sharedExp[i] = maxExp - sharedExp[i];
+        if (sharedExp[i] >= 0) {
+            sharedExp[i] = frac >>> sharedExp[i];
+        } else {
+            console.log("SharedExp was greater than maxExp.  What did you do?!");
+        }
+    }
+    return sharedExp;
+};
+
+// Vectord32.prototype.dot(toSubtract) {
+//     return false;
+// }
+
+Vectord32.prototype.squareMe = function () {
+    "use strict";
+    var i;
+    this.rightShift(16);
+    for (i = 0; i < this.length - 1; i += 1) {
+        this[i] *= this[i];
+    }
+    this[this.length - 1] <<= 1;
+};
+
+Vectord32.prototype.rightShift = function (digits) {
+    //Shift all the data number of digits right
+    //Increase the exponent to compensate
+    //Such that the array represents the same values
+    //To less precision
+    "use strict";
+    var i;
+
+    for (i = 0; i < this.length - 1; i += 1) {
+        this[i] >>= digits;
+    }
+    this[this.length - 1] += digits;
+};
+
+
+Vectord32.prototype.decrementMe = function (toSubtract) {
+    "use strict";
+    var i;
+    var deltaExp = this[this.length - 1];
+    deltaExp -= toSubtract[toSubtract.length - 1];
+
+    if (deltaExp > 0) {
+        toSubtract.rightShift(deltaExp);
+    } else if (deltaExp < 0) {
+        this.rightShift(-deltaExp);
+    }
+
+    for (i = 0; i < this.length - 1; i += 1) {
+        this[i] -= toSubtract[i];
+    }
+};
+
+
 function BruteFrog(maxNumParticles) {
 /*This implements the brute force algorithm, O(N_vector ^ 2);
 Vector3d should pull from this kinematics buffer.
@@ -9,7 +158,7 @@ And Particle will therefore see this transparently.
     this.numColumns = maxNumParticles;
     this.N = this.numColumns;
 
-    this.tView = Float64Array;
+    this.tView = tView;
 
     this.rowSize = this.numColumns * this.tView.BYTES_PER_ELEMENT;
 
